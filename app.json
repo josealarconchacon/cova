@@ -13,7 +13,12 @@
       "backgroundColor": "#3D7A6E"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://cova.app"
+        }
+      ],
       "expo-secure-store"
     ],
     "ios": {
