@@ -7,6 +7,7 @@ export const Colors = {
   bark: "#6B5744",
   bark2: "#4A3728",
   moss: "#8FAF72",
+  mossPale: "#EDF5E4",
   dusk: "#B07D6C",
   dawn: "#F2C9A0",
   cream: "#FDFAF6",
