@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Cova",
+    "slug": "cova",
+    "scheme": "cova",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3D7A6E"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jose.cova"
+    },
+    "android": {
+      "package": "com.jose.cova",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3D7A6E"
+      }
+    }
+  }
+}

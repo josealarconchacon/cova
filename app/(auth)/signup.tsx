@@ -1,0 +1,491 @@
+import { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { router } from "expo-router";
+import { supabase } from "../../lib/supabase";
+import { Colors } from "../../constants/theme";
+
+const ROLES = [
+  { id: "mom", icon: "💛", label: "Mom" },
+  { id: "dad", icon: "💙", label: "Dad" },
+  { id: "grandparent", icon: "🤍", label: "Grandparent" },
+  { id: "caregiver", icon: "💚", label: "Caregiver" },
+];
+
+export default function SignUpScreen() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  // ── Step 1 validation ──
+  const validateStep1 = () => {
+    if (!email.includes("@")) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return false;
+    }
+    if (password.length < 8) {
+      Alert.alert("Weak password", "Password must be at least 8 characters.");
+      return false;
+    }
+    if (password !== confirm) {
+      Alert.alert(
+        "Passwords don't match",
+        "Please make sure both passwords are the same.",
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const passwordStrength = () => {
+    if (password.length === 0) return null;
+    if (password.length < 8)
+      return { label: "Too short", color: "#C0392B", bars: 1 };
+    if (password.length < 12)
+      return { label: "Good", color: Colors.teal, bars: 2 };
+    if (password.length < 16)
+      return { label: "Strong", color: Colors.moss, bars: 3 };
+    return { label: "Very strong", color: Colors.moss, bars: 4 };
+  };
+
+  // ── Sign up handler ──
+  const handleSignUp = async () => {
+    if (!name.trim()) {
+      Alert.alert("Missing name", "Please enter your first name.");
+      return;
+    }
+    if (!role) {
+      Alert.alert("Missing role", "Please select your role.");
+      return;
+    }
+
+    setLoading(true);
+
+    // 1. Create Supabase auth user
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+
+    if (authError || !data.user) {
+      setLoading(false);
+      Alert.alert("Sign up failed", authError?.message ?? "Unknown error");
+      return;
+    }
+
+    // 2. Create family
+    const { data: family, error: familyError } = await supabase
+      .from("families")
+      .insert({ family_name: `${name.trim()}'s Family` })
+      .select()
+      .single();
+
+    if (familyError) {
+      setLoading(false);
+      Alert.alert("Error creating family", familyError.message);
+      return;
+    }
+
+    // 3. Create profile
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: data.user.id,
+      family_id: family.id,
+      display_name: name.trim(),
+      role,
+    });
+
+    setLoading(false);
+
+    if (profileError) {
+      Alert.alert("Error creating profile", profileError.message);
+      return;
+    }
+
+    // 4. Go to onboarding
+    router.replace("/onboarding");
+  };
+
+  const strength = passwordStrength();
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Progress dots */}
+        <View style={styles.dotsRow}>
+          {[1, 2].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.dot,
+                {
+                  width: i === step ? 28 : 8,
+                  backgroundColor: i <= step ? Colors.teal : Colors.sandDark,
+                },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Header */}
+        <Text style={styles.logo}>Cova</Text>
+        <Text style={styles.tagline}>
+          {step === 1 ? "Create your account" : "Tell us about yourself"}
+        </Text>
+        <Text style={styles.subtitle}>
+          {step === 1
+            ? "Step 1 of 2 — Your credentials"
+            : "Step 2 of 2 — Your profile"}
+        </Text>
+
+        {/* ── STEP 1 ── */}
+        {step === 1 && (
+          <>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="you@email.com"
+              placeholderTextColor={Colors.inkLight}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="At least 8 characters"
+                placeholderTextColor={Colors.inkLight}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPass}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPass((v) => !v)}
+                style={styles.eyeBtn}
+              >
+                <Text style={{ fontSize: 18 }}>{showPass ? "🙈" : "👁️"}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Password strength bar */}
+            {strength && (
+              <View style={{ marginBottom: 16, marginTop: -8 }}>
+                <View style={{ flexDirection: "row", gap: 4, marginBottom: 4 }}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <View
+                      key={i}
+                      style={{
+                        flex: 1,
+                        height: 3,
+                        borderRadius: 2,
+                        backgroundColor:
+                          i <= strength.bars ? strength.color : Colors.sandDark,
+                      }}
+                    />
+                  ))}
+                </View>
+                <Text
+                  style={{
+                    fontFamily: "DM-Sans",
+                    fontSize: 11,
+                    color: strength.color,
+                  }}
+                >
+                  {strength.label}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.label}>Confirm password</Text>
+            <TextInput
+              style={[
+                styles.input,
+                confirm.length > 0 &&
+                  confirm !== password && { borderColor: "#C0392B" },
+              ]}
+              placeholder="Repeat your password"
+              placeholderTextColor={Colors.inkLight}
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+            />
+            {confirm.length > 0 && confirm !== password && (
+              <Text style={styles.errorText}>⚠ Passwords don't match</Text>
+            )}
+
+            <TouchableOpacity
+              style={[styles.btn, { marginTop: 12 }]}
+              onPress={() => validateStep1() && setStep(2)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnText}>Continue →</Text>
+            </TouchableOpacity>
+
+            {/* Divider + Apple */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <TouchableOpacity style={styles.appleBtn}>
+              <Text style={styles.appleBtnText}>🍎 Sign up with Apple</Text>
+            </TouchableOpacity>
+
+            <View style={styles.switchRow}>
+              <Text style={styles.switchText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.switchLink}>Sign in</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {/* ── STEP 2 ── */}
+        {step === 2 && (
+          <>
+            <Text style={styles.label}>Your first name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Sarah"
+              placeholderTextColor={Colors.inkLight}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.label}>Your role</Text>
+            <View style={styles.roleGrid}>
+              {ROLES.map((r) => (
+                <TouchableOpacity
+                  key={r.id}
+                  onPress={() => setRole(r.id)}
+                  style={[
+                    styles.roleBtn,
+                    role === r.id && styles.roleBtnActive,
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 28, marginBottom: 6 }}>
+                    {r.icon}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.roleText,
+                      role === r.id && styles.roleTextActive,
+                    ]}
+                  >
+                    {r.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.btn,
+                loading && styles.btnDisabled,
+                { marginTop: 8 },
+              ]}
+              onPress={handleSignUp}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnText}>
+                {loading ? "Creating your Cova…" : "Create my Cova 🌿"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setStep(1)}
+              style={{ alignItems: "center", marginTop: 16 }}
+            >
+              <Text style={styles.switchLink}>← Back</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: Colors.cream,
+    padding: 28,
+    paddingTop: 60,
+  },
+  dotsRow: {
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    marginBottom: 32,
+  },
+  dot: {
+    height: 4,
+    borderRadius: 2,
+  },
+  logo: {
+    fontFamily: "Cormorant-Garamond",
+    fontSize: 44,
+    fontWeight: "600",
+    color: Colors.teal,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  tagline: {
+    fontFamily: "Cormorant-Garamond",
+    fontSize: 26,
+    fontStyle: "italic",
+    fontWeight: "300",
+    color: Colors.inkMid,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontFamily: "DM-Sans",
+    fontSize: 13,
+    color: Colors.inkLight,
+    textAlign: "center",
+    marginBottom: 36,
+  },
+  label: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.inkLight,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: Colors.sand,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 16,
+    padding: 15,
+    fontFamily: "DM-Sans",
+    fontSize: 15,
+    color: Colors.ink,
+    marginBottom: 16,
+  },
+  passwordWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.sand,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 16,
+    paddingRight: 12,
+    marginBottom: 8,
+  },
+  eyeBtn: { padding: 8 },
+  errorText: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: "#C0392B",
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  btn: {
+    backgroundColor: Colors.teal,
+    borderRadius: 18,
+    padding: 17,
+    alignItems: "center",
+    shadowColor: Colors.teal,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  btnDisabled: { opacity: 0.6 },
+  btnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 16,
+    color: "white",
+    letterSpacing: 0.3,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+    gap: 12,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.sandDark },
+  dividerText: { fontFamily: "DM-Sans", fontSize: 12, color: Colors.inkLight },
+  appleBtn: {
+    backgroundColor: "#2A2018",
+    borderRadius: 18,
+    padding: 17,
+    alignItems: "center",
+  },
+  appleBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 16,
+    color: "white",
+  },
+  roleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 24,
+  },
+  roleBtn: {
+    width: "47%",
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 18,
+    padding: 18,
+    alignItems: "center",
+    backgroundColor: Colors.cream,
+  },
+  roleBtnActive: {
+    borderColor: Colors.teal,
+    backgroundColor: Colors.tealPale,
+  },
+  roleText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 14,
+    color: Colors.inkMid,
+  },
+  roleTextActive: { color: Colors.teal },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
+  },
+  switchText: { fontFamily: "DM-Sans", fontSize: 14, color: Colors.inkLight },
+  switchLink: {
+    fontFamily: "DM-Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.teal,
+  },
+});
