@@ -1,6 +1,3 @@
-// Track which co-parents are currently active in the app.
-// Powers the green "online" dot next to each co-parent.
-
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
