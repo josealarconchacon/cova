@@ -7,11 +7,13 @@ import {
   StyleSheet,
   RefreshControl,
 } from "react-native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useRealtimeSync } from "../../lib/useRealtimeSync";
+import { usePresence } from "../../lib/usePresence";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
-import type { Log } from "../../types";
+import type { Log, Profile } from "../../types";
 
 import { QuickActions } from "../../components/logs/QuickActions";
 import { TimerBar } from "../../components/logs/TimerBar";
@@ -19,7 +21,6 @@ import { TimelineItem } from "../../components/logs/TimelineItem";
 import { SummaryCards } from "../../components/logs/SummaryCards";
 
 export default function HomeScreen() {
-  const queryClient = useQueryClient();
   const { profile, activeBaby, activeLog, setActiveLog } = useStore();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -51,32 +52,32 @@ export default function HomeScreen() {
     },
   });
 
+  // ── Family members (for co-parent presence dot) ─────────────────
+  const { data: members = [] } = useQuery<Profile[]>({
+    queryKey: ["members", profile?.family_id],
+    enabled: !!profile?.family_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("family_id", profile!.family_id);
+      if (error) throw error;
+      return data as Profile[];
+    },
+  });
+
+  const coParent = members.find((m) => m.id !== profile?.id);
+
+  // ── Co-parent presence ──────────────────────────────────────────
+  const { isCoParentOnline } = usePresence(profile?.family_id, profile);
+
   // ── Realtime subscription ───────────────────────────────────────
-  useEffect(() => {
-    if (!activeBaby) return;
-
-    const channel = supabase
-      .channel("home-logs-" + activeBaby.id)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "logs",
-          filter: `baby_id=eq.${activeBaby.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({
-            queryKey: ["logs", activeBaby.id, today],
-          });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeBaby?.id]);
+  useRealtimeSync({
+    familyId: profile?.family_id ?? "",
+    babyId: activeBaby?.id ?? "",
+    table: "logs",
+    queryKey: ["logs", activeBaby?.id, today],
+  });
 
   // ── Start a timed log ───────────────────────────────────────────
   const startTimer = async (type: "feed" | "sleep") => {
@@ -176,8 +177,18 @@ export default function HomeScreen() {
           <View style={styles.avatar}>
             <Text style={{ fontSize: 24 }}>🌙</Text>
           </View>
-          {/* Green dot = co-parent online */}
-          <View style={styles.syncDot} />
+          {/* Green = co-parent online, grey = offline */}
+          <View
+            style={[
+              styles.syncDot,
+              {
+                backgroundColor:
+                  coParent && isCoParentOnline(coParent.id)
+                    ? Colors.moss
+                    : Colors.sandDark,
+              },
+            ]}
+          />
         </View>
       </View>
 
