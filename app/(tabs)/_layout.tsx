@@ -35,6 +35,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="baby"
+        options={{
+          title: "Baby",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>🌙</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: "Insights",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>📊</Text>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
