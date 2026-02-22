@@ -61,6 +61,25 @@ export function TimelineItem({ log, index }: Props) {
     label: log.type,
   };
 
+  // For feed logs, derive subtype label and bottle amount from metadata
+  const feedType = log.type === "feed"
+    ? (log.metadata?.feed_type as string | undefined)
+    : undefined;
+  const feedLabel =
+    feedType === "nursing" ? "Nursing" :
+    feedType === "bottle"  ? "Bottle Feed" :
+    cfg.label;
+
+  const bottleAmountMl = feedType === "bottle"
+    ? (log.metadata?.amount_ml as number | undefined)
+    : undefined;
+  const bottleUnit = (log.metadata?.amount_unit as string | undefined) ?? "ml";
+  const bottleDisplay = bottleAmountMl != null
+    ? bottleUnit === "oz"
+      ? `${(Math.round((bottleAmountMl / 29.5735) * 10) / 10).toFixed(1)} oz`
+      : `${bottleAmountMl} ml`
+    : undefined;
+
   return (
     <Animated.View
       style={[styles.row, { opacity, transform: [{ translateX }] }]}
@@ -70,15 +89,27 @@ export function TimelineItem({ log, index }: Props) {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Top row: icon + label + duration badge */}
+        {/* Top row: icon + label + badges */}
         <View style={styles.topRow}>
-          <Text style={{ fontSize: 18 }}>{cfg.icon}</Text>
-          <Text style={styles.label}>{cfg.label}</Text>
+          <Text style={{ fontSize: 18 }}>
+            {feedType === "nursing" ? "🤱" : cfg.icon}
+          </Text>
+          <Text style={styles.label}>{feedLabel}</Text>
 
+          {/* Duration badge */}
           {log.duration_seconds != null && log.duration_seconds > 0 && (
             <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
               <Text style={[styles.badgeText, { color: cfg.color }]}>
                 {formatDuration(log.duration_seconds)}
+              </Text>
+            </View>
+          )}
+
+          {/* Bottle amount badge */}
+          {bottleDisplay && (
+            <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
+              <Text style={[styles.badgeText, { color: cfg.color }]}>
+                {bottleDisplay}
               </Text>
             </View>
           )}
