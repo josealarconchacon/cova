@@ -30,7 +30,7 @@ export interface Log {
   baby_id: string;
   family_id: string;
   logged_by: string;
-  type: "feed" | "sleep" | "diaper" | "health";
+  type: "feed" | "sleep" | "diaper" | "health" | "milestone";
   started_at: string;
   ended_at: string | null;
   duration_seconds: number | null;

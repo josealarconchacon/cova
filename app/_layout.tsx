@@ -3,13 +3,16 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { supabase } from "../lib/supabase";
 import { useStore } from "../store/useStore";
+import type { Baby } from "../types";
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const setProfile = useStore((s) => s.setProfile);
+  const setActiveBaby = useStore((s) => s.setActiveBaby);
   const router = useRouter();
   const segments = useSegments();
   const [ready, setReady] = useState(false);
@@ -26,15 +29,29 @@ export default function RootLayout() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, sess) => {
       if (sess?.user) {
-        const { data } = await supabase
+        // Load profile
+        const { data: profile } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", sess.user.id)
           .single();
-        setProfile(data);
+        setProfile(profile);
+
+        // Load the first baby for this family so all tab screens can render
+        if (profile?.family_id) {
+          const { data: babies } = await supabase
+            .from("babies")
+            .select("*")
+            .eq("family_id", profile.family_id)
+            .order("created_at", { ascending: true })
+            .limit(1);
+          setActiveBaby((babies?.[0] as Baby) ?? null);
+        }
+
         setSession(true);
       } else {
         setProfile(null);
+        setActiveBaby(null);
         setSession(false);
       }
     });
@@ -60,9 +77,11 @@ export default function RootLayout() {
   // the redirect fires once auth + fonts are resolved.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <Stack screenOptions={{ headerShown: false }} />
+        </QueryClientProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

@@ -14,6 +14,12 @@ export const Colors = {
   ink: "#2A2018",
   inkMid: "#5C4F3F",
   inkLight: "#9A8C7C",
+  gold: "#C9961A",
+  goldPale: "#FDF3E7",
+  lav: "#8B7EC8",
+  lavPale: "#F0EDF8",
+  sky: "#5A8FC9",
+  skyPale: "#EBF2FA",
 } as const;
 
 export const LogTypes = {
