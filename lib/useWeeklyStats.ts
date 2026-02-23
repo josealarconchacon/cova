@@ -4,14 +4,24 @@ import type { Log } from "../types";
 export interface DailyStats {
   date: string; // YYYY-MM-DD
   feedCount: number;
+  nursingCount: number;
+  bottleCount: number;
   sleepHours: number;
   diaperCount: number;
+  wetCount: number;
+  dirtyCount: number;
+  bothCount: number;
 }
 
 export interface FeedInsights {
   peakHour: number | null;
   avgDurationMin: number;
   nightFeedCount: number;
+  nursingTotal: number;
+  bottleTotal: number;
+  nursingAvgMin: number;
+  bottleAvgMin: number;
+  bottleAvgMl: number;
 }
 
 export interface SleepInsights {
@@ -21,8 +31,12 @@ export interface SleepInsights {
 }
 
 export interface DiaperInsights {
+  wetTotal: number;
+  dirtyTotal: number;
+  bothTotal: number;
   wetPct: number;
   dirtyPct: number;
+  bothPct: number;
   peakHour: number | null;
 }
 
@@ -84,8 +98,13 @@ export function useWeeklyStats(
       return {
         date: d.toISOString().split("T")[0],
         feedCount: 0,
+        nursingCount: 0,
+        bottleCount: 0,
         sleepHours: 0,
         diaperCount: 0,
+        wetCount: 0,
+        dirtyCount: 0,
+        bothCount: 0,
       };
     });
 
@@ -93,8 +112,19 @@ export function useWeeklyStats(
       const logDate = log.started_at.split("T")[0];
       const day = days.find((d) => d.date === logDate);
       if (!day) continue;
-      if (log.type === "feed") day.feedCount++;
-      if (log.type === "diaper") day.diaperCount++;
+      if (log.type === "feed") {
+        day.feedCount++;
+        const ft = (log.metadata?.feed_type as string) ?? "";
+        if (ft === "bottle") day.bottleCount++;
+        else day.nursingCount++;
+      }
+      if (log.type === "diaper") {
+        day.diaperCount++;
+        const dt = (log.metadata?.diaper_type as string) ?? "";
+        if (dt === "both") day.bothCount++;
+        else if (dt === "dirty") day.dirtyCount++;
+        else day.wetCount++;
+      }
       if (log.type === "sleep" && log.duration_seconds) {
         day.sleepHours += log.duration_seconds / 3600;
       }
@@ -112,6 +142,23 @@ export function useWeeklyStats(
 
     // ── Feed insights ──
     const feedLogs = currentWeekLogs.filter((l) => l.type === "feed");
+    const nursingLogs = feedLogs.filter(
+      (l) => (l.metadata?.feed_type as string) !== "bottle",
+    );
+    const bottleLogs = feedLogs.filter(
+      (l) => (l.metadata?.feed_type as string) === "bottle",
+    );
+
+    const avgDur = (logs: Log[]) => {
+      const durations = logs
+        .filter((l) => l.duration_seconds != null && l.duration_seconds > 0)
+        .map((l) => l.duration_seconds!);
+      if (durations.length === 0) return 0;
+      return Math.round(
+        (durations.reduce((a, b) => a + b, 0) / durations.length / 60) * 10,
+      ) / 10;
+    };
+
     const feedDurations = feedLogs
       .filter((l) => l.duration_seconds != null && l.duration_seconds > 0)
       .map((l) => l.duration_seconds!);
@@ -121,6 +168,15 @@ export function useWeeklyStats(
             (feedDurations.reduce((a, b) => a + b, 0) / feedDurations.length / 60) * 10,
           ) / 10
         : 0;
+
+    const bottleAmounts = bottleLogs
+      .filter((l) => l.metadata?.amount_ml != null)
+      .map((l) => l.metadata!.amount_ml as number);
+    const bottleAvgMl =
+      bottleAmounts.length > 0
+        ? Math.round(bottleAmounts.reduce((a, b) => a + b, 0) / bottleAmounts.length)
+        : 0;
+
     const nightFeedCount = feedLogs.filter((l) => {
       const h = new Date(l.started_at).getHours();
       return h >= 22 || h < 6;
@@ -147,16 +203,19 @@ export function useWeeklyStats(
 
     // ── Diaper insights ──
     const diaperLogs = currentWeekLogs.filter((l) => l.type === "diaper");
-    let wetCount = 0;
-    let dirtyCount = 0;
+    let wetTotal = 0;
+    let dirtyTotal = 0;
+    let bothTotal = 0;
     for (const log of diaperLogs) {
       const dt = (log.metadata?.diaper_type as string) ?? "";
-      if (dt === "wet" || dt === "both") wetCount++;
-      if (dt === "dirty" || dt === "both") dirtyCount++;
+      if (dt === "both") bothTotal++;
+      else if (dt === "dirty") dirtyTotal++;
+      else wetTotal++;
     }
     const diaperTotal = diaperLogs.length || 1;
-    const wetPct = Math.round((wetCount / diaperTotal) * 100);
-    const dirtyPct = Math.round((dirtyCount / diaperTotal) * 100);
+    const wetPct = Math.round((wetTotal / diaperTotal) * 100);
+    const dirtyPct = Math.round((dirtyTotal / diaperTotal) * 100);
+    const bothPct = Math.round((bothTotal / diaperTotal) * 100);
 
     // ── Week-over-week ──
     const prevFeeds = previousWeekLogs.filter((l) => l.type === "feed").length;
@@ -183,6 +242,11 @@ export function useWeeklyStats(
         peakHour: computePeakHour(currentWeekLogs, "feed"),
         avgDurationMin,
         nightFeedCount,
+        nursingTotal: nursingLogs.length,
+        bottleTotal: bottleLogs.length,
+        nursingAvgMin: avgDur(nursingLogs),
+        bottleAvgMin: avgDur(bottleLogs),
+        bottleAvgMl,
       },
       sleepInsights: {
         bestDay,
@@ -190,8 +254,12 @@ export function useWeeklyStats(
         longestNapMin,
       },
       diaperInsights: {
+        wetTotal,
+        dirtyTotal,
+        bothTotal,
         wetPct,
         dirtyPct,
+        bothPct,
         peakHour: computePeakHour(currentWeekLogs, "diaper"),
       },
       weekOverWeek: {

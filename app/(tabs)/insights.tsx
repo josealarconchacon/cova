@@ -27,6 +27,12 @@ import {
 
 const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
+const DIAPER_COLORS = {
+  wet: Colors.sky,
+  dirty: Colors.bark,
+  both: Colors.gold,
+} as const;
+
 type Tab = "feeds" | "sleep" | "diapers";
 
 const TABS = [
@@ -46,13 +52,58 @@ function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
   const cards: InsightCard[] = [];
   const { feedInsights } = stats;
 
-  if (feedInsights.peakHour != null) {
+  const hasNursing = feedInsights.nursingTotal > 0;
+  const hasBottle = feedInsights.bottleTotal > 0;
+
+  if (hasNursing || hasBottle) {
+    const parts: string[] = [];
+    if (hasNursing) parts.push(`${feedInsights.nursingTotal} nursing`);
+    if (hasBottle) parts.push(`${feedInsights.bottleTotal} bottle`);
     cards.push({
-      icon: "📈",
-      title: "Peak feeding time",
-      text: `Most feeds happen around ${hourRangeLabel(feedInsights.peakHour)}.`,
+      icon: "🍼",
+      title: "Nursing vs Bottle",
+      text: `${parts.join(", ")} — ${stats.totalFeeds} total feeds this week.`,
       color: Colors.dusk,
     });
+  }
+
+  if (hasNursing && hasBottle) {
+    const parts: string[] = [];
+    if (feedInsights.nursingAvgMin > 0)
+      parts.push(`Nursing avg: ${feedInsights.nursingAvgMin} min`);
+    if (feedInsights.bottleAvgMin > 0)
+      parts.push(`Bottle avg: ${feedInsights.bottleAvgMin} min`);
+    if (feedInsights.bottleAvgMl > 0)
+      parts.push(`~${feedInsights.bottleAvgMl} ml/feed`);
+    if (parts.length > 0) {
+      cards.push({
+        icon: "⏱️",
+        title: "Duration comparison",
+        text: `${parts.join(". ")}.`,
+        color: Colors.moss,
+      });
+    }
+  } else if (hasNursing && feedInsights.nursingAvgMin > 0) {
+    cards.push({
+      icon: "⏱️",
+      title: "Nursing duration",
+      text: `Average nursing session: ${feedInsights.nursingAvgMin} min.`,
+      color: Colors.moss,
+    });
+  } else if (hasBottle) {
+    const parts: string[] = [];
+    if (feedInsights.bottleAvgMin > 0)
+      parts.push(`Avg session: ${feedInsights.bottleAvgMin} min`);
+    if (feedInsights.bottleAvgMl > 0)
+      parts.push(`~${feedInsights.bottleAvgMl} ml per feed`);
+    if (parts.length > 0) {
+      cards.push({
+        icon: "⏱️",
+        title: "Bottle details",
+        text: `${parts.join(". ")}.`,
+        color: Colors.moss,
+      });
+    }
   }
 
   if (feedInsights.nightFeedCount > 0) {
@@ -71,12 +122,12 @@ function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
     });
   }
 
-  if (feedInsights.avgDurationMin > 0) {
+  if (feedInsights.peakHour != null) {
     cards.push({
-      icon: "⏱️",
-      title: "Average duration",
-      text: `Average feeding session: ${feedInsights.avgDurationMin} min.`,
-      color: Colors.moss,
+      icon: "📈",
+      title: "Peak feeding time",
+      text: `Most feeds happen around ${hourRangeLabel(feedInsights.peakHour)}.`,
+      color: Colors.teal,
     });
   }
 
@@ -143,13 +194,36 @@ function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
   const cards: InsightCard[] = [];
   const { diaperInsights } = stats;
 
-  if (stats.totalDiapers > 0 && (diaperInsights.wetPct > 0 || diaperInsights.dirtyPct > 0)) {
+  const hasWet = diaperInsights.wetTotal > 0;
+  const hasDirty = diaperInsights.dirtyTotal > 0;
+  const hasBoth = diaperInsights.bothTotal > 0;
+
+  if (hasWet || hasDirty || hasBoth) {
+    const parts: string[] = [];
+    if (hasWet) parts.push(`${diaperInsights.wetTotal} wet`);
+    if (hasDirty) parts.push(`${diaperInsights.dirtyTotal} dirty`);
+    if (hasBoth) parts.push(`${diaperInsights.bothTotal} both`);
     cards.push({
-      icon: "✅",
-      title: "Wet / dirty ratio",
-      text: `${diaperInsights.wetPct}% wet, ${diaperInsights.dirtyPct}% dirty this week.`,
-      color: Colors.teal,
+      icon: "🧷",
+      title: "Wet, Dirty & Both",
+      text: `${parts.join(", ")} — ${stats.totalDiapers} total changes this week.`,
+      color: Colors.moss,
     });
+  }
+
+  if (stats.totalDiapers > 0) {
+    const pctParts: string[] = [];
+    if (diaperInsights.wetPct > 0) pctParts.push(`${diaperInsights.wetPct}% wet`);
+    if (diaperInsights.dirtyPct > 0) pctParts.push(`${diaperInsights.dirtyPct}% dirty`);
+    if (diaperInsights.bothPct > 0) pctParts.push(`${diaperInsights.bothPct}% both`);
+    if (pctParts.length > 0) {
+      cards.push({
+        icon: "📊",
+        title: "Type breakdown",
+        text: `${pctParts.join(", ")} of all changes.`,
+        color: Colors.teal,
+      });
+    }
   }
 
   if (diaperInsights.peakHour != null) {
@@ -163,10 +237,10 @@ function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
 
   if (stats.avgDiapers > 0) {
     cards.push({
-      icon: "📊",
+      icon: "📈",
       title: "Daily average",
-      text: `Averaging ${stats.avgDiapers} diaper change${stats.avgDiapers === 1 ? "" : "s"} per day.`,
-      color: Colors.moss,
+      text: `Averaging ${stats.avgDiapers} change${stats.avgDiapers === 1 ? "" : "s"} per day.`,
+      color: Colors.sky,
     });
   }
 
@@ -270,26 +344,37 @@ export default function InsightsScreen() {
       ? "—"
       : `${wowChange > 0 ? "+" : ""}${wowChange}`;
 
-  const statItems = [
-    {
-      label: "Daily Avg",
-      value: avg.toFixed(1),
-      suffix: activeTab === "sleep" ? "h" : "",
-    },
-    {
-      label: "This Week",
-      value:
-        activeTab === "sleep"
-          ? stats.totalSleepHours.toFixed(1)
-          : total.toString(),
-      suffix: activeTab === "sleep" ? "h" : "",
-    },
-    {
+  const buildStatItems = () => {
+    const wowStat = {
       label: "vs Last Week",
       value: wowLabel,
       suffix: wowChange != null ? "%" : "",
-    },
-  ];
+    };
+
+    if (activeTab === "feeds") {
+      return [
+        { label: "Nursing", value: stats.feedInsights.nursingTotal.toString(), suffix: "" },
+        { label: "Bottle", value: stats.feedInsights.bottleTotal.toString(), suffix: "" },
+        wowStat,
+      ];
+    }
+
+    if (activeTab === "diapers") {
+      return [
+        { label: "Wet", value: stats.diaperInsights.wetTotal.toString(), suffix: "" },
+        { label: "Dirty", value: stats.diaperInsights.dirtyTotal.toString(), suffix: "" },
+        { label: "Both", value: stats.diaperInsights.bothTotal.toString(), suffix: "" },
+      ];
+    }
+
+    return [
+      { label: "Daily Avg", value: avg.toFixed(1), suffix: "h" },
+      { label: "This Week", value: stats.totalSleepHours.toFixed(1), suffix: "h" },
+      wowStat,
+    ];
+  };
+
+  const statItems = buildStatItems();
 
   return (
     <ScrollView
@@ -380,6 +465,131 @@ export default function InsightsScreen() {
             {chartData.map((val: number, i: number) => {
               const pct = (val / maxVal) * 100;
               const isToday = i === 6;
+
+              if (activeTab === "feeds") {
+                const day = stats.days[i];
+                const totalPct = Math.max(pct, 4);
+                const nursingFrac = val > 0 ? day.nursingCount / val : 0;
+                const bottleFrac = val > 0 ? day.bottleCount / val : 0;
+                const hasBoth = day.nursingCount > 0 && day.bottleCount > 0;
+                return (
+                  <View key={i} style={styles.barWrap}>
+                    <View style={styles.barTrack}>
+                      {val > 0 && (
+                        <Text
+                          style={[
+                            styles.barValue,
+                            { color: isToday ? activeConfig.color : Colors.inkLight },
+                          ]}
+                        >
+                          {val}
+                        </Text>
+                      )}
+                      <View
+                        style={{
+                          width: "70%",
+                          height: `${totalPct}%`,
+                          overflow: "hidden",
+                          borderRadius: 8,
+                        }}
+                      >
+                        {day.bottleCount > 0 && (
+                          <View
+                            style={{
+                              flex: bottleFrac,
+                              backgroundColor: isToday ? Colors.dawn : Colors.dawn + "90",
+                              borderBottomWidth: hasBoth ? 1 : 0,
+                              borderBottomColor: Colors.sand,
+                            }}
+                          />
+                        )}
+                        {day.nursingCount > 0 && (
+                          <View
+                            style={{
+                              flex: nursingFrac,
+                              backgroundColor: isToday ? Colors.dusk : Colors.dusk + "55",
+                            }}
+                          />
+                        )}
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.dayLabel,
+                        isToday && { color: activeConfig.color, fontWeight: "700" },
+                      ]}
+                    >
+                      {WEEK_DAYS[i]}
+                    </Text>
+                  </View>
+                );
+              }
+
+              if (activeTab === "diapers") {
+                const day = stats.days[i];
+                const totalPct = Math.max(pct, 4);
+                const wetFrac = val > 0 ? day.wetCount / val : 0;
+                const dirtyFrac = val > 0 ? day.dirtyCount / val : 0;
+                const bothFrac = val > 0 ? day.bothCount / val : 0;
+                return (
+                  <View key={i} style={styles.barWrap}>
+                    <View style={styles.barTrack}>
+                      {val > 0 && (
+                        <Text
+                          style={[
+                            styles.barValue,
+                            { color: isToday ? activeConfig.color : Colors.inkLight },
+                          ]}
+                        >
+                          {val}
+                        </Text>
+                      )}
+                      <View
+                        style={{
+                          width: "70%",
+                          height: `${totalPct}%`,
+                          overflow: "hidden",
+                          borderRadius: 8,
+                        }}
+                      >
+                        {day.bothCount > 0 && (
+                          <View
+                            style={{
+                              flex: bothFrac,
+                              backgroundColor: isToday ? DIAPER_COLORS.both : DIAPER_COLORS.both + "70",
+                            }}
+                          />
+                        )}
+                        {day.dirtyCount > 0 && (
+                          <View
+                            style={{
+                              flex: dirtyFrac,
+                              backgroundColor: isToday ? DIAPER_COLORS.dirty : DIAPER_COLORS.dirty + "55",
+                            }}
+                          />
+                        )}
+                        {day.wetCount > 0 && (
+                          <View
+                            style={{
+                              flex: wetFrac,
+                              backgroundColor: isToday ? DIAPER_COLORS.wet : DIAPER_COLORS.wet + "55",
+                            }}
+                          />
+                        )}
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.dayLabel,
+                        isToday && { color: activeConfig.color, fontWeight: "700" },
+                      ]}
+                    >
+                      {WEEK_DAYS[i]}
+                    </Text>
+                  </View>
+                );
+              }
+
               return (
                 <View key={i} style={styles.barWrap}>
                   <View style={styles.barTrack}>
@@ -390,7 +600,7 @@ export default function InsightsScreen() {
                           { color: isToday ? activeConfig.color : Colors.inkLight },
                         ]}
                       >
-                        {activeTab === "sleep" ? val.toFixed(1) : val}
+                        {val.toFixed(1)}
                       </Text>
                     )}
                     <View
@@ -422,6 +632,38 @@ export default function InsightsScreen() {
             })}
           </View>
         </View>
+
+        {/* Legend for feeds */}
+        {activeTab === "feeds" && stats.totalFeeds > 0 && (
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Colors.dusk }]} />
+              <Text style={styles.legendText}>Nursing</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Colors.dawn }]} />
+              <Text style={styles.legendText}>Bottle</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Legend for diapers */}
+        {activeTab === "diapers" && stats.totalDiapers > 0 && (
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: DIAPER_COLORS.wet }]} />
+              <Text style={styles.legendText}>Wet</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: DIAPER_COLORS.dirty }]} />
+              <Text style={styles.legendText}>Dirty</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: DIAPER_COLORS.both }]} />
+              <Text style={styles.legendText}>Both</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* ── Patterns ── */}
@@ -601,6 +843,28 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 20,
+    marginTop: 12,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
+  },
+  legendText: {
+    fontFamily: "DM-Sans",
+    fontSize: 11,
+    color: Colors.inkLight,
+    fontWeight: "500",
+  },
   sectionLabel: {
     fontFamily: "DM-Sans",
     fontSize: 11,
