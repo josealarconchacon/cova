@@ -1,0 +1,62 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F8F5FF"/>
+      <stop offset="100%" stop-color="#EEE8FF"/>
+    </linearGradient>
+    <linearGradient id="pad" x1="14" y1="12" x2="66" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F4F0FF"/>
+    </linearGradient>
+    <linearGradient id="spiral" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#B0A0E0"/>
+      <stop offset="100%" stop-color="#7060B8"/>
+    </linearGradient>
+    <linearGradient id="pencil" x1="58" y1="42" x2="78" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="100%" stop-color="#F9A825"/>
+    </linearGradient>
+    <linearGradient id="moon" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FFE57A"/>
+      <stop offset="100%" stop-color="#F0B429"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+
+  <!-- Notepad shadow -->
+  <rect x="17" y="15" width="50" height="62" rx="7" fill="rgba(112,96,184,0.1)"/>
+
+  <!-- Notepad body -->
+  <rect x="14" y="12" width="50" height="62" rx="7" fill="url(#pad)" stroke="#D0C8F0" stroke-width="1.2"/>
+
+  <!-- Spiral binding -->
+  <rect x="12" y="12" width="6" height="62" rx="3" fill="#E8E0FF"/>
+  <!-- Spiral coils -->
+  <circle cx="15" cy="22" r="4" fill="none" stroke="url(#spiral)" stroke-width="2"/>
+  <circle cx="15" cy="34" r="4" fill="none" stroke="url(#spiral)" stroke-width="2"/>
+  <circle cx="15" cy="46" r="4" fill="none" stroke="url(#spiral)" stroke-width="2"/>
+  <circle cx="15" cy="58" r="4" fill="none" stroke="url(#spiral)" stroke-width="2"/>
+  <circle cx="15" cy="70" r="4" fill="none" stroke="url(#spiral)" stroke-width="2"/>
+
+  <!-- Lines on notepad -->
+  <line x1="24" y1="28" x2="56" y2="28" stroke="#D0C8F0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="36" x2="56" y2="36" stroke="#D0C8F0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="44" x2="50" y2="44" stroke="#D0C8F0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="52" x2="54" y2="52" stroke="#D0C8F0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="60" x2="46" y2="60" stroke="#D0C8F0" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Moon on notepad (top right corner of page) -->
+  <path d="M52 18 C46 19 42 24 43 30 C44 36 50 39 56 37 C50 40 42 36 40 30 C38 24 43 18 49 17 C50 16.8 51 17.3 52 18 Z" fill="url(#moon)"/>
+
+  <!-- Pencil body -->
+  <rect x="58" y="46" width="10" height="34" rx="3" fill="url(#pencil)" transform="rotate(-40 58 46)"/>
+  <!-- Pencil tip -->
+  <path d="M72 70 L76 80 L68 78 Z" fill="#F5C842" transform="rotate(-40 72 70)"/>
+  <path d="M72 70 L76 80 L74 75 Z" fill="#3A2010" opacity="0.6" transform="rotate(-40 72 70)"/>
+  <!-- Pencil eraser -->
+  <rect x="57" y="42" width="10" height="5" rx="2" fill="#FFB3B3" transform="rotate(-40 57 42)"/>
+  <!-- Pencil shine -->
+  <rect x="60" y="48" width="2.5" height="20" rx="1.2" fill="white" opacity="0.3" transform="rotate(-40 60 48)"/>
+  <!-- Pencil wood tip detail -->
+  <path d="M70 68 L74 76 L68 74" fill="none" stroke="#D4A060" stroke-width="1" transform="rotate(-40 70 68)"/>
+</svg>

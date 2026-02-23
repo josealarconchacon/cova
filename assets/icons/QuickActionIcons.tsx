@@ -433,3 +433,78 @@ export function OtherLiquidIcon({ size = 32, color = "#7B1FA2" }: IconProps) {
     </Svg>
   );
 }
+
+// ── Sleep modal icons ─────────────────────────────────────────────────────────
+
+export function StartTimerIcon({ size = 24, color = "#5A8FC9" }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="10 4 68 82" fill="none">
+      {/* Crown / top button */}
+      <Rect x="36" y="8" width="16" height="6" rx="3" fill={color} opacity={0.45} />
+      <Rect x="38" y="10" width="12" height="8" rx="4" fill={color} opacity={0.4} />
+      {/* Side buttons */}
+      <Rect x="14" y="30" width="6" height="10" rx="3" fill={color} opacity={0.35} />
+      <Rect x="68" y="30" width="6" height="10" rx="3" fill={color} opacity={0.35} />
+      {/* Outer ring */}
+      <Circle cx="44" cy="54" r="32" fill={color} opacity={0.25} />
+      {/* Inner body */}
+      <Circle cx="44" cy="54" r="27" fill="white" opacity={0.6} />
+      <Circle cx="44" cy="54" r="27" fill="none" stroke={color} strokeWidth="1.5" opacity={0.35} />
+      {/* Tick marks */}
+      <Line x1="44" y1="30" x2="44" y2="34" stroke={color} strokeWidth="2" strokeLinecap="round" opacity={0.5} />
+      <Line x1="44" y1="74" x2="44" y2="78" stroke={color} strokeWidth="2" strokeLinecap="round" opacity={0.5} />
+      <Line x1="20" y1="54" x2="24" y2="54" stroke={color} strokeWidth="2" strokeLinecap="round" opacity={0.5} />
+      <Line x1="64" y1="54" x2="68" y2="54" stroke={color} strokeWidth="2" strokeLinecap="round" opacity={0.5} />
+      {/* Diagonal ticks */}
+      <Line x1="28" y1="36" x2="30.8" y2="38.8" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.35} />
+      <Line x1="60" y1="36" x2="57.2" y2="38.8" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.35} />
+      <Line x1="28" y1="72" x2="30.8" y2="69.2" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.35} />
+      <Line x1="60" y1="72" x2="57.2" y2="69.2" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.35} />
+      {/* Minute hand */}
+      <Line x1="44" y1="54" x2="44" y2="36" stroke={color} strokeWidth="2.5" strokeLinecap="round" opacity={0.65} />
+      {/* Hour hand */}
+      <Line x1="44" y1="54" x2="56" y2="46" stroke={color} strokeWidth="2" strokeLinecap="round" opacity={0.6} />
+      {/* Center dot */}
+      <Circle cx="44" cy="54" r="3.5" fill={color} opacity={0.55} />
+      <Circle cx="44" cy="54" r="1.5" fill="white" opacity={0.7} />
+      {/* Shine */}
+      <Ellipse cx="35" cy="44" rx="5" ry="8" fill="white" opacity={0.2} transform="rotate(-20 35 44)" />
+    </Svg>
+  );
+}
+
+export function LogPastSleepIcon({ size = 24, color = "#5A8FC9" }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="8 6 74 80" fill="none">
+      {/* Notepad shadow */}
+      <Rect x="17" y="15" width="50" height="62" rx="7" fill={color} opacity={0.08} />
+      {/* Notepad body */}
+      <Rect x="14" y="12" width="50" height="62" rx="7" fill="white" opacity={0.6} stroke={color} strokeWidth="1.2" />
+      {/* Spiral binding */}
+      <Rect x="12" y="12" width="6" height="62" rx="3" fill={color} opacity={0.15} />
+      {/* Spiral coils */}
+      <Circle cx="15" cy="22" r="4" fill="none" stroke={color} strokeWidth="2" opacity={0.35} />
+      <Circle cx="15" cy="34" r="4" fill="none" stroke={color} strokeWidth="2" opacity={0.35} />
+      <Circle cx="15" cy="46" r="4" fill="none" stroke={color} strokeWidth="2" opacity={0.35} />
+      <Circle cx="15" cy="58" r="4" fill="none" stroke={color} strokeWidth="2" opacity={0.35} />
+      <Circle cx="15" cy="70" r="4" fill="none" stroke={color} strokeWidth="2" opacity={0.35} />
+      {/* Lines on notepad */}
+      <Line x1="24" y1="28" x2="56" y2="28" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.25} />
+      <Line x1="24" y1="36" x2="56" y2="36" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.25} />
+      <Line x1="24" y1="44" x2="50" y2="44" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.25} />
+      <Line x1="24" y1="52" x2="54" y2="52" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.25} />
+      <Line x1="24" y1="60" x2="46" y2="60" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity={0.25} />
+      {/* Moon on notepad */}
+      <Path d="M52 18 C46 19 42 24 43 30 C44 36 50 39 56 37 C50 40 42 36 40 30 C38 24 43 18 49 17 C50 16.8 51 17.3 52 18 Z" fill={color} opacity={0.4} />
+      {/* Pencil body */}
+      <Rect x="58" y="46" width="10" height="34" rx="3" fill={color} opacity={0.35} transform="rotate(-40 58 46)" />
+      {/* Pencil tip */}
+      <Path d="M72 70 L76 80 L68 78 Z" fill={color} opacity={0.4} transform="rotate(-40 72 70)" />
+      <Path d="M72 70 L76 80 L74 75 Z" fill={color} opacity={0.6} transform="rotate(-40 72 70)" />
+      {/* Pencil eraser */}
+      <Rect x="57" y="42" width="10" height="5" rx="2" fill={color} opacity={0.3} transform="rotate(-40 57 42)" />
+      {/* Pencil shine */}
+      <Rect x="60" y="48" width="2.5" height="20" rx="1.2" fill="white" opacity={0.25} transform="rotate(-40 60 48)" />
+    </Svg>
+  );
+}

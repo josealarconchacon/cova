@@ -24,6 +24,8 @@ import {
   BottleIcon,
   FormulaIcon,
   OtherLiquidIcon,
+  StartTimerIcon,
+  LogPastSleepIcon,
 } from "../../assets/icons/QuickActionIcons";
 import {
   WetIcon,
@@ -648,21 +650,33 @@ function SleepModal({ onClose, onStartTimer, onSavePastSleep }: SleepModalProps)
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>Sleep 💤</Text>
+            <View style={ss.titleRow}>
+              <SleepIcon size={22} color={SLEEP_COLOR} />
+              <Text style={styles.sheetTitle}>Sleep</Text>
+            </View>
 
             {/* Tab selector */}
             <View style={ss.tabRow}>
-              {(["timer", "log"] as const).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[ss.tab, tab === t && ss.tabActive]}
-                  onPress={() => setTab(t)}
-                >
-                  <Text style={[ss.tabText, tab === t && ss.tabTextActive]}>
-                    {t === "timer" ? "⏱️ Start Timer" : "📝 Log Past Sleep"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {(["timer", "log"] as const).map((t) => {
+                const isActive = tab === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[ss.tab, isActive && ss.tabActive]}
+                    onPress={() => setTab(t)}
+                  >
+                    <View style={ss.tabContent}>
+                      {t === "timer"
+                        ? <StartTimerIcon size={18} color={isActive ? SLEEP_COLOR : Colors.inkLight} />
+                        : <LogPastSleepIcon size={18} color={isActive ? SLEEP_COLOR : Colors.inkLight} />
+                      }
+                      <Text style={[ss.tabText, isActive && ss.tabTextActive]}>
+                        {t === "timer" ? "Start Timer" : "Log Past Sleep"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Timer tab */}
@@ -681,7 +695,7 @@ function SleepModal({ onClose, onStartTimer, onSavePastSleep }: SleepModalProps)
                   style={[ss.actionBtn, { backgroundColor: SLEEP_COLOR }]}
                   onPress={handleStartTimer}
                 >
-                  <Text style={ss.actionBtnText}>▶  Start Sleep Timer</Text>
+                  <Text style={ss.actionBtnText}>Start Sleep Timer</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1225,6 +1239,12 @@ const ss = StyleSheet.create({
     padding: 4,
     marginBottom: 20,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   tab: {
     flex: 1,
     paddingVertical: 10,
@@ -1238,6 +1258,11 @@ const ss = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  tabContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   tabText: {
     fontFamily: "DM-Sans",
