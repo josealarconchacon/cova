@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useRef } from "react";
 import {
   View,
@@ -12,13 +13,23 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Colors } from "../../constants/theme";
+import { TimePickerField } from "./TimePickerField";
+import {
+  FeedIcon,
+  SleepIcon,
+  DiaperIcon,
+  MomentIcon,
+  HealthIcon,
+} from "../../assets/icons/QuickActionIcons";
+
+const ACTION_ICON_SIZE = 30;
 
 const ACTIONS = [
-  { id: "feed",      icon: "🍼", label: "Feed",   color: Colors.dusk,  hasTimer: true  },
-  { id: "sleep",     icon: "💤", label: "Sleep",  color: "#5A8FC9",    hasTimer: true  },
-  { id: "diaper",    icon: "🩲", label: "Diaper", color: Colors.moss,  hasTimer: false },
-  { id: "milestone", icon: "⭐", label: "Moment", color: "#C9961A",    hasTimer: false },
-  { id: "health",    icon: "🏥", label: "Health", color: "#8B7EC8",    hasTimer: false },
+  { id: "feed",      Icon: FeedIcon,   label: "Feed",   color: Colors.dusk,  hasTimer: true  },
+  { id: "sleep",     Icon: SleepIcon,  label: "Sleep",  color: "#5A8FC9",    hasTimer: true  },
+  { id: "diaper",    Icon: DiaperIcon, label: "Diaper", color: Colors.moss,  hasTimer: false },
+  { id: "milestone", Icon: MomentIcon, label: "Moment", color: "#C9961A",    hasTimer: false },
+  { id: "health",    Icon: HealthIcon, label: "Health", color: "#8B7EC8",    hasTimer: false },
 ] as const;
 
 type ActionId = (typeof ACTIONS)[number]["id"];
@@ -32,6 +43,12 @@ export interface BottleFeedData {
   ended_at: string | null;
 }
 
+export interface SleepLogData {
+  started_at: string;
+  ended_at: string;
+  notes: string;
+}
+
 interface Props {
   activeTimerType: string | null;
   onTimerAction: (type: "feed" | "sleep", startedAt?: string) => void;
@@ -41,6 +58,7 @@ interface Props {
     metadata?: Record<string, unknown>,
   ) => void;
   onFeedLog: (data: BottleFeedData) => void;
+  onSleepLog: (data: SleepLogData) => void;
 }
 
 export function QuickActions({
@@ -48,6 +66,7 @@ export function QuickActions({
   onTimerAction,
   onInstantLog,
   onFeedLog,
+  onSleepLog,
 }: Props) {
   const [modal, setModal] = useState<ActionId | null>(null);
 
@@ -59,7 +78,8 @@ export function QuickActions({
       if (activeTimerType === "feed") return;
       setModal("feed");
     } else if (action.id === "sleep") {
-      onTimerAction("sleep");
+      if (activeTimerType === "sleep") return;
+      setModal("sleep");
     } else {
       setModal(action.id);
     }
@@ -88,7 +108,10 @@ export function QuickActions({
               onPress={() => handlePress(action)}
               activeOpacity={0.8}
             >
-              <Text style={styles.icon}>{action.icon}</Text>
+              <action.Icon
+                size={ACTION_ICON_SIZE}
+                color={isActive ? "white" : action.color}
+              />
               <Text style={[styles.label, isActive && { color: "white" }]}>
                 {action.label}
               </Text>
@@ -122,12 +145,27 @@ export function QuickActions({
         />
       )}
 
+      {/* ── Sleep modal ── */}
+      {modal === "sleep" && (
+        <SleepModal
+          onClose={() => setModal(null)}
+          onStartTimer={(startedAt) => {
+            onTimerAction("sleep", startedAt);
+            setModal(null);
+          }}
+          onSavePastSleep={(data) => {
+            onSleepLog(data);
+            setModal(null);
+          }}
+        />
+      )}
+
       {/* ── Diaper modal ── */}
       {modal === "diaper" && (
         <DiaperModal
           onClose={() => setModal(null)}
-          onSave={(type, note) => {
-            onInstantLog("diaper", note, { diaper_type: type });
+          onSave={(type, note, meta) => {
+            onInstantLog("diaper", note, meta);
             setModal(null);
           }}
         />
@@ -167,27 +205,6 @@ export function QuickActions({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const ML_PER_OZ = 29.5735;
-
-function formatTime(date: Date): string {
-  const h = date.getHours() % 12 || 12;
-  const m = String(date.getMinutes()).padStart(2, "0");
-  const ap = date.getHours() >= 12 ? "PM" : "AM";
-  return `${h}:${m} ${ap}`;
-}
-
-function parseTime(text: string, base: Date): Date | null {
-  const match = text.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (!match) return null;
-  let h = parseInt(match[1]);
-  const min = parseInt(match[2]);
-  const ap = match[3]?.toUpperCase();
-  if (ap === "PM" && h !== 12) h += 12;
-  if (ap === "AM" && h === 12) h = 0;
-  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
-  const d = new Date(base);
-  d.setHours(h, min, 0, 0);
-  return d;
-}
 
 // ── Custom slider (no external packages needed) ───────────────────────────────
 
@@ -286,7 +303,7 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
   const [tab, setTab] = useState<"nursing" | "bottle">("nursing");
 
   // Nursing state
-  const [nursingStart, setNursingStart] = useState(formatTime(now));
+  const [nursingStart, setNursingStart] = useState(now);
 
   // Bottle state
   const [milkType, setMilkType] = useState<
@@ -295,14 +312,12 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
   const [amountMl, setAmountMl] = useState(120);
   const [unit, setUnit] = useState<"ml" | "oz">("ml");
   const [notes, setNotes] = useState("");
-  const [bottleStart, setBottleStart] = useState(formatTime(now));
-  const [bottleEnd, setBottleEnd] = useState("");
+  const [bottleStart, setBottleStart] = useState(now);
+  const [bottleEnd, setBottleEnd] = useState<Date | null>(null);
 
   // ── Nursing ──
   const handleStartNursing = () => {
-    const parsed = parseTime(nursingStart, new Date());
-    const startedAt = parsed ? parsed.toISOString() : new Date().toISOString();
-    onStartNursing(startedAt);
+    onStartNursing(nursingStart.toISOString());
   };
 
   // ── Bottle / slider ──
@@ -335,16 +350,13 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
   // ── Bottle save ──
   const handleSaveBottle = () => {
     if (!milkType) return;
-    const base = new Date();
-    const parsedStart = parseTime(bottleStart, base);
-    const parsedEnd = bottleEnd.trim() ? parseTime(bottleEnd, base) : null;
     onSaveBottle({
       milk_type: milkType,
       amount_ml: amountMl,
       amount_unit: unit,
       notes,
-      started_at: parsedStart ? parsedStart.toISOString() : new Date().toISOString(),
-      ended_at: parsedEnd ? parsedEnd.toISOString() : null,
+      started_at: bottleStart.toISOString(),
+      ended_at: bottleEnd ? bottleEnd.toISOString() : null,
     });
   };
 
@@ -390,13 +402,11 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
             {/* ── Nursing pane ── */}
             {tab === "nursing" && (
               <View>
-                <Text style={fs.label}>Start time</Text>
-                <TextInput
-                  style={fs.timeInput}
+                <TimePickerField
+                  label="Start time"
                   value={nursingStart}
-                  onChangeText={setNursingStart}
-                  placeholder="e.g. 10:30 AM"
-                  placeholderTextColor={Colors.inkLight}
+                  onChange={setNursingStart}
+                  accentColor={Colors.dusk}
                 />
                 <Text style={fs.hint}>
                   Adjust if nursing started a few minutes ago
@@ -513,24 +523,20 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
                 {/* Start / end time */}
                 <View style={fs.timeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={fs.label}>Start time</Text>
-                    <TextInput
-                      style={fs.timeInput}
+                    <TimePickerField
+                      label="Start time"
                       value={bottleStart}
-                      onChangeText={setBottleStart}
-                      placeholder="10:30 AM"
-                      placeholderTextColor={Colors.inkLight}
+                      onChange={setBottleStart}
+                      accentColor={Colors.dusk}
                     />
                   </View>
                   <View style={{ width: 12 }} />
                   <View style={{ flex: 1 }}>
-                    <Text style={fs.label}>End time</Text>
-                    <TextInput
-                      style={fs.timeInput}
-                      value={bottleEnd}
-                      onChangeText={setBottleEnd}
-                      placeholder="10:45 AM"
-                      placeholderTextColor={Colors.inkLight}
+                    <TimePickerField
+                      label="End time"
+                      value={bottleEnd ?? new Date()}
+                      onChange={setBottleEnd}
+                      accentColor={Colors.dusk}
                     />
                   </View>
                 </View>
@@ -557,22 +563,205 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
   );
 }
 
+// ── Sleep modal ──────────────────────────────────────────────────────────────
+
+const SLEEP_COLOR = "#5A8FC9";
+
+interface SleepModalProps {
+  onClose: () => void;
+  onStartTimer: (startedAt: string) => void;
+  onSavePastSleep: (data: SleepLogData) => void;
+}
+
+function SleepModal({ onClose, onStartTimer, onSavePastSleep }: SleepModalProps) {
+  const now = new Date();
+  const [tab, setTab] = useState<"timer" | "log">("timer");
+
+  const [timerStart, setTimerStart] = useState(now);
+  const defaultLogStart = new Date(now.getTime() - 60 * 60 * 1000);
+  const [logStart, setLogStart] = useState(defaultLogStart);
+  const [logEnd, setLogEnd] = useState(now);
+  const [notes, setNotes] = useState("");
+
+  const handleStartTimer = () => {
+    onStartTimer(timerStart.toISOString());
+  };
+
+  const handleSavePast = () => {
+    if (!canSavePast) return;
+    onSavePastSleep({
+      started_at: logStart.toISOString(),
+      ended_at: logEnd.toISOString(),
+      notes: notes.trim(),
+    });
+  };
+
+  const canSavePast = logEnd.getTime() > logStart.getTime();
+
+  const durationPreview = (() => {
+    const diffMin = Math.round((logEnd.getTime() - logStart.getTime()) / 60000);
+    if (diffMin <= 0) return null;
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  })();
+
+  return (
+    <Modal transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>Sleep 💤</Text>
+
+            {/* Tab selector */}
+            <View style={ss.tabRow}>
+              {(["timer", "log"] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[ss.tab, tab === t && ss.tabActive]}
+                  onPress={() => setTab(t)}
+                >
+                  <Text style={[ss.tabText, tab === t && ss.tabTextActive]}>
+                    {t === "timer" ? "⏱️ Start Timer" : "📝 Log Past Sleep"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Timer tab */}
+            {tab === "timer" && (
+              <View>
+                <TimePickerField
+                  label="Start time"
+                  value={timerStart}
+                  onChange={setTimerStart}
+                  accentColor={SLEEP_COLOR}
+                />
+                <Text style={ss.hint}>
+                  Adjust if baby fell asleep a few minutes ago
+                </Text>
+                <TouchableOpacity
+                  style={[ss.actionBtn, { backgroundColor: SLEEP_COLOR }]}
+                  onPress={handleStartTimer}
+                >
+                  <Text style={ss.actionBtnText}>▶  Start Sleep Timer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Log past sleep tab */}
+            {tab === "log" && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={{ maxHeight: 400 }}
+              >
+                <TimePickerField
+                  label="Fell asleep at"
+                  value={logStart}
+                  onChange={setLogStart}
+                  accentColor={SLEEP_COLOR}
+                />
+
+                <TimePickerField
+                  label="Woke up at"
+                  value={logEnd}
+                  onChange={setLogEnd}
+                  accentColor={SLEEP_COLOR}
+                />
+
+                {durationPreview && (
+                  <View style={ss.durationRow}>
+                    <Text style={ss.durationIcon}>⏱</Text>
+                    <Text style={ss.durationText}>
+                      Duration: {durationPreview}
+                    </Text>
+                  </View>
+                )}
+
+                <Text style={ss.label}>Notes (optional)</Text>
+                <TextInput
+                  style={ss.notesInput}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="e.g. Fussy before nap, slept well…"
+                  placeholderTextColor={Colors.inkLight}
+                  multiline
+                  textAlignVertical="top"
+                />
+
+                <TouchableOpacity
+                  style={[
+                    ss.actionBtn,
+                    { backgroundColor: SLEEP_COLOR },
+                    !canSavePast && ss.actionBtnDisabled,
+                  ]}
+                  onPress={handleSavePast}
+                  disabled={!canSavePast}
+                >
+                  <Text style={ss.actionBtnText}>Save Sleep Log</Text>
+                </TouchableOpacity>
+                <View style={{ height: 16 }} />
+              </ScrollView>
+            )}
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
 // ── Diaper modal ──────────────────────────────────────────────────────────────
 
 interface DiaperProps {
   onClose: () => void;
-  onSave: (type: string, note: string) => void;
+  onSave: (type: string, note: string, meta: Record<string, unknown>) => void;
 }
 
-function DiaperModal({ onClose, onSave }: DiaperProps) {
-  const [type, setType] = useState<string | null>(null);
-  const [note, setNote] = useState("");
+const AMOUNTS = [
+  { label: "Little",  value: "little", icon: "🔹" },
+  { label: "Medium",  value: "medium", icon: "🔷" },
+  { label: "Lot",     value: "lot",    icon: "💦" },
+] as const;
 
-  const options = [
-    { label: "Wet 💧", value: "wet" },
-    { label: "Dirty 💩", value: "dirty" },
-    { label: "Both 🌊", value: "both" },
-  ];
+const POO_TYPES = [
+  { value: "seedy_yellow",  label: "Seedy / Yellow",   icon: "🌼", badge: "Normal",   badgeColor: Colors.moss  },
+  { value: "tan_brown",     label: "Tan / Brown",      icon: "🤎", badge: "Normal",   badgeColor: Colors.moss  },
+  { value: "green",         label: "Green",            icon: "🟢", badge: "Monitor",  badgeColor: "#C9961A"    },
+  { value: "orange",        label: "Orange",           icon: "🟠", badge: "Normal",   badgeColor: Colors.moss  },
+  { value: "watery",        label: "Watery / Runny",   icon: "💧", badge: "Monitor",  badgeColor: "#C9961A"    },
+  { value: "mucousy",       label: "Mucousy",          icon: "🫧", badge: "Monitor",  badgeColor: "#C9961A"    },
+  { value: "black_dark",    label: "Black / Dark",     icon: "⬛", badge: "Flag",     badgeColor: Colors.dusk  },
+  { value: "blood",         label: "Blood / Red",      icon: "🔴", badge: "See doctor", badgeColor: "#C0392B"  },
+] as const;
+
+type AmountValue  = (typeof AMOUNTS)[number]["value"];
+type PooTypeValue = (typeof POO_TYPES)[number]["value"];
+
+function DiaperModal({ onClose, onSave }: DiaperProps) {
+  const [type,       setType]       = useState<"wet" | "dirty" | "both" | null>(null);
+  const [wetAmt,     setWetAmt]     = useState<AmountValue | null>(null);
+  const [dirtyAmt,   setDirtyAmt]   = useState<AmountValue | null>(null);
+  const [pooType,    setPooType]    = useState<PooTypeValue | null>(null);
+  const [note,       setNote]       = useState("");
+
+  const showWet   = type === "wet"   || type === "both";
+  const showDirty = type === "dirty" || type === "both";
+  const canSave   = !!type &&
+    (showWet   ? !!wetAmt   : true) &&
+    (showDirty ? !!dirtyAmt && !!pooType : true);
+
+  const handleSave = () => {
+    if (!type || !canSave) return;
+    const meta: Record<string, unknown> = { diaper_type: type };
+    if (showWet)   meta.wet_amount  = wetAmt;
+    if (showDirty) { meta.dirty_amount = dirtyAmt; meta.poo_type = pooType; }
+    onSave(type, note.trim(), meta);
+  };
+
+  const selectedPoo = POO_TYPES.find((p) => p.value === pooType);
 
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose}>
@@ -580,53 +769,128 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
         <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
           <View style={styles.handle} />
           <Text style={styles.sheetTitle}>Diaper change 🩲</Text>
-          <Text style={styles.sheetSub}>What kind?</Text>
 
+          {/* ── Type selector ── */}
+          <Text style={styles.noteLabel}>What kind?</Text>
           <View style={styles.optionRow}>
-            {options.map((o) => (
+            {([
+              { label: "Wet 💧",   value: "wet"   },
+              { label: "Dirty 💩", value: "dirty" },
+              { label: "Both 🌊",  value: "both"  },
+            ] as const).map((o) => (
               <TouchableOpacity
                 key={o.value}
-                onPress={() => setType(o.value)}
+                onPress={() => { setType(o.value); setWetAmt(null); setDirtyAmt(null); setPooType(null); }}
                 style={[
                   styles.optionBtn,
-                  type === o.value && {
-                    borderColor: Colors.moss,
-                    backgroundColor: Colors.mossPale,
-                  },
+                  type === o.value && { borderColor: Colors.moss, backgroundColor: Colors.mossPale },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    type === o.value && { color: Colors.moss },
-                  ]}
-                >
+                <Text style={[styles.optionText, type === o.value && { color: Colors.moss }]}>
                   {o.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Notice / note field */}
-          <Text style={styles.noteLabel}>Notice anything? (optional)</Text>
-          <TextInput
-            style={styles.noteInput}
-            value={note}
-            onChangeText={setNote}
-            placeholder="e.g. Unusual colour, rash, blood — anything worth flagging"
-            placeholderTextColor={Colors.inkLight}
-            multiline
-            textAlignVertical="top"
-          />
+          {/* ── Wet amount ── */}
+          {showWet && (
+            <View style={ds.section}>
+              <Text style={styles.noteLabel}>💧 Wet — how much?</Text>
+              <View style={ds.amtRow}>
+                {AMOUNTS.map((a) => (
+                  <TouchableOpacity
+                    key={a.value}
+                    style={[ds.amtBtn, wetAmt === a.value && ds.amtBtnActive]}
+                    onPress={() => setWetAmt(a.value)}
+                  >
+                    <Text style={ds.amtIcon}>{a.icon}</Text>
+                    <Text style={[ds.amtLabel, wetAmt === a.value && ds.amtLabelActive]}>
+                      {a.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* ── Dirty amount ── */}
+          {showDirty && (
+            <View style={ds.section}>
+              <Text style={styles.noteLabel}>💩 Dirty — how much?</Text>
+              <View style={ds.amtRow}>
+                {AMOUNTS.map((a) => (
+                  <TouchableOpacity
+                    key={a.value}
+                    style={[ds.amtBtn, dirtyAmt === a.value && ds.amtBtnActive]}
+                    onPress={() => setDirtyAmt(a.value)}
+                  >
+                    <Text style={ds.amtIcon}>{a.icon}</Text>
+                    <Text style={[ds.amtLabel, dirtyAmt === a.value && ds.amtLabelActive]}>
+                      {a.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Poo type */}
+              <Text style={[styles.noteLabel, { marginTop: 14 }]}>What did it look like?</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={ds.pooScroll}
+                contentContainerStyle={ds.pooScrollContent}
+              >
+                {POO_TYPES.map((p) => (
+                  <TouchableOpacity
+                    key={p.value}
+                    style={[ds.pooBtn, pooType === p.value && { borderColor: Colors.moss, backgroundColor: Colors.mossPale }]}
+                    onPress={() => setPooType(p.value)}
+                  >
+                    <Text style={ds.pooIcon}>{p.icon}</Text>
+                    <Text style={[ds.pooLabel, pooType === p.value && { color: Colors.moss }]}>
+                      {p.label}
+                    </Text>
+                    <View style={[ds.pooBadge, { backgroundColor: p.badgeColor + "22" }]}>
+                      <Text style={[ds.pooBadgeText, { color: p.badgeColor }]}>{p.badge}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Alert hint for flagged poo types */}
+              {selectedPoo && (selectedPoo.badge === "Flag" || selectedPoo.badge === "See doctor") && (
+                <View style={[ds.alert, { borderColor: selectedPoo.badgeColor }]}>
+                  <Text style={[ds.alertText, { color: selectedPoo.badgeColor }]}>
+                    {selectedPoo.badge === "See doctor"
+                      ? "🚨 Blood in stool — contact your paediatrician promptly."
+                      : "⚠️ Dark/black stool after day 5 may need checking. In newborns it can be normal (meconium)."}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Notice / note ── */}
+          {type && (
+            <View style={ds.section}>
+              <Text style={styles.noteLabel}>Notice anything? (optional)</Text>
+              <TextInput
+                style={styles.noteInput}
+                value={note}
+                onChangeText={setNote}
+                placeholder="e.g. Rash, unusual smell, skin irritation…"
+                placeholderTextColor={Colors.inkLight}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+          )}
 
           <TouchableOpacity
-            style={[
-              styles.saveBtn,
-              { backgroundColor: Colors.moss },
-              !type && styles.saveBtnDisabled,
-            ]}
-            onPress={() => type && onSave(type, note.trim())}
-            disabled={!type}
+            style={[styles.saveBtn, { backgroundColor: Colors.moss }, !canSave && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={!canSave}
           >
             <Text style={styles.saveBtnText}>Log Diaper</Text>
           </TouchableOpacity>
@@ -635,6 +899,96 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
     </Modal>
   );
 }
+
+// Diaper-specific styles
+const ds = StyleSheet.create({
+  section: {
+    marginBottom: 4,
+  },
+  amtRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 4,
+  },
+  amtBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: Colors.cream,
+  },
+  amtBtnActive: {
+    borderColor: Colors.moss,
+    backgroundColor: Colors.mossPale,
+  },
+  amtIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  amtLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 12,
+    color: Colors.inkMid,
+  },
+  amtLabelActive: {
+    color: Colors.moss,
+  },
+  pooScroll: {
+    marginBottom: 8,
+  },
+  pooScrollContent: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  pooBtn: {
+    width: 110,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    backgroundColor: Colors.cream,
+  },
+  pooIcon: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  pooLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 11,
+    color: Colors.inkMid,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  pooBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  pooBadgeText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 9,
+    letterSpacing: 0.3,
+  },
+  alert: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  alertText: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "600",
+  },
+});
 
 // ── Note modal (milestone + health) ──────────────────────────────────────────
 
@@ -704,7 +1058,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   icon: {
-    fontSize: 26,
     marginBottom: 5,
   },
   label: {
@@ -815,6 +1168,123 @@ const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontWeight: "700",
     fontSize: 16,
+    color: "white",
+  },
+});
+
+// Sleep-modal-specific styles
+const ss = StyleSheet.create({
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: Colors.sand,
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  tabActive: {
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 14,
+    color: Colors.inkLight,
+  },
+  tabTextActive: {
+    color: "#5A8FC9",
+  },
+  label: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 11,
+    color: Colors.inkLight,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  hint: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.inkLight,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  timeInput: {
+    backgroundColor: Colors.sand,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: "DM-Sans",
+    fontSize: 15,
+    color: Colors.ink,
+    marginBottom: 14,
+  },
+  notesInput: {
+    backgroundColor: Colors.sand,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: "DM-Sans",
+    fontSize: 15,
+    color: Colors.ink,
+    minHeight: 70,
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  durationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#EAF1F9",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+  },
+  durationIcon: {
+    fontSize: 16,
+  },
+  durationText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 14,
+    color: "#5A8FC9",
+  },
+  actionBtn: {
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    marginTop: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionBtnDisabled: {
+    opacity: 0.4,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  actionBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 15,
     color: "white",
   },
 });

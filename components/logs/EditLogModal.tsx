@@ -12,32 +12,11 @@ import {
 } from "react-native";
 import { Colors } from "../../constants/theme";
 import type { Log } from "../../types";
+import { TimePickerField } from "./TimePickerField";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const ML_PER_OZ = 29.5735;
-
-function toTimeStr(iso: string): string {
-  const d = new Date(iso);
-  let h = d.getHours();
-  const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
-}
-
-function parseTimeStr(str: string, ref: Date): Date | null {
-  const match = str.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return null;
-  let h = parseInt(match[1], 10);
-  const min = parseInt(match[2], 10);
-  const ampm = match[3].toUpperCase();
-  if (ampm === "PM" && h !== 12) h += 12;
-  if (ampm === "AM" && h === 12) h = 0;
-  const d = new Date(ref);
-  d.setHours(h, min, 0, 0);
-  return d;
-}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -94,8 +73,10 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
   const hasEndTime = log.type === "feed" || log.type === "sleep";
 
   // ── Common state ──────────────────────────────────────────────────────────
-  const [startTime, setStartTime] = useState(toTimeStr(log.started_at));
-  const [endTime,   setEndTime]   = useState(log.ended_at ? toTimeStr(log.ended_at) : "");
+  const [startTime, setStartTime] = useState(new Date(log.started_at));
+  const [endTime,   setEndTime]   = useState<Date | null>(
+    log.ended_at ? new Date(log.ended_at) : null,
+  );
   const [notes,     setNotes]     = useState(log.notes ?? "");
 
   // ── Bottle-specific state ─────────────────────────────────────────────────
@@ -154,23 +135,20 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
   // ── Save handler ──────────────────────────────────────────────────────────
   const handleSave = () => {
     if (!canSave) return;
-    const base = new Date();
-    const parsedStart = parseTimeStr(startTime, base) ?? new Date(log.started_at);
-    const parsedEnd   = endTime.trim() ? parseTimeStr(endTime, base) : null;
 
     const duration =
-      parsedEnd != null
+      endTime != null
         ? Math.max(
             0,
             Math.floor(
-              (parsedEnd.getTime() - parsedStart.getTime()) / 1000,
+              (endTime.getTime() - startTime.getTime()) / 1000,
             ),
           )
         : log.duration_seconds;
 
     const payload: EditPayload = {
-      started_at:       parsedStart.toISOString(),
-      ended_at:         parsedEnd?.toISOString() ?? null,
+      started_at:       startTime.toISOString(),
+      ended_at:         endTime?.toISOString() ?? null,
       duration_seconds: duration,
       notes:            notes.trim() || null,
     };
@@ -222,24 +200,20 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
               {!isDiaper && (
                 <View style={s.row2}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.label}>Start time</Text>
-                    <TextInput
-                      style={s.input}
+                    <TimePickerField
+                      label="Start time"
                       value={startTime}
-                      onChangeText={setStartTime}
-                      placeholder="8:30 AM"
-                      placeholderTextColor={Colors.inkLight}
+                      onChange={setStartTime}
+                      accentColor={log.type === "sleep" ? "#5A8FC9" : Colors.dusk}
                     />
                   </View>
                   {hasEndTime && (
                     <View style={{ flex: 1 }}>
-                      <Text style={s.label}>End time</Text>
-                      <TextInput
-                        style={s.input}
-                        value={endTime}
-                        onChangeText={setEndTime}
-                        placeholder="9:15 AM"
-                        placeholderTextColor={Colors.inkLight}
+                      <TimePickerField
+                        label="End time"
+                        value={endTime ?? new Date()}
+                        onChange={setEndTime}
+                        accentColor={log.type === "sleep" ? "#5A8FC9" : Colors.dusk}
                       />
                     </View>
                   )}
