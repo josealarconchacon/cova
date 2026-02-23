@@ -1,17 +1,32 @@
+import React from "react";
 import { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  PanResponder,
+  Pressable,
+  Alert,
+} from "react-native";
 import { Colors } from "../../constants/theme";
 import type { Log } from "../../types";
+import {
+  FeedIcon,
+  SleepIcon,
+  DiaperIcon,
+  MomentIcon,
+  HealthIcon,
+} from "../../assets/icons/QuickActionIcons";
 
-const TYPE_CONFIG: Record<
-  string,
-  { color: string; icon: string; label: string }
-> = {
-  feed: { color: Colors.dusk, icon: "🍼", label: "Feeding" },
-  sleep: { color: "#5A8FC9", icon: "💤", label: "Sleep" },
-  diaper: { color: Colors.moss, icon: "🩲", label: "Diaper change" },
-  milestone: { color: "#C9961A", icon: "⭐", label: "Milestone" },
-  health: { color: "#8B7EC8", icon: "🏥", label: "Health note" },
+const ACTION_WIDTH = 140;
+
+const TYPE_CONFIG: Record<string, { color: string; Icon: React.FC<{ size?: number; color?: string }>; label: string }> = {
+  feed:      { color: Colors.dusk,  Icon: FeedIcon,   label: "Feeding"       },
+  sleep:     { color: "#5A8FC9",    Icon: SleepIcon,  label: "Sleep"         },
+  diaper:    { color: Colors.moss,  Icon: DiaperIcon, label: "Diaper change" },
+  milestone: { color: "#C9961A",    Icon: MomentIcon, label: "Milestone"     },
+  health:    { color: "#8B7EC8",    Icon: HealthIcon, label: "Health note"   },
 };
 
 function formatDuration(secs: number): string {
@@ -31,21 +46,41 @@ function formatTime(iso: string): string {
 interface Props {
   log: Log;
   index: number;
+  /** true when this row is the currently open swipe item */
+  isSwipeOpen: boolean;
+  onSwipeOpen: () => void;
+  onSwipeClose: () => void;
+  onEdit: (log: Log) => void;
+  onDelete: (id: string) => void;
 }
 
-export function TimelineItem({ log, index }: Props) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateX = useRef(new Animated.Value(-20)).current;
+export function TimelineItem({
+  log,
+  index,
+  isSwipeOpen,
+  onSwipeOpen,
+  onSwipeClose,
+  onEdit,
+  onDelete,
+}: Props) {
+  // ── Entrance animation ────────────────────────────────────────────────────
+  const entranceOpacity = useRef(new Animated.Value(0)).current;
+  const entranceX       = useRef(new Animated.Value(-20)).current;
+
+  // ── Swipe animation ───────────────────────────────────────────────────────
+  const swipeX    = useRef(new Animated.Value(0)).current;
+  // Ref tracks open state without causing re-renders
+  const isOpenRef = useRef(false);
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, {
+      Animated.timing(entranceOpacity, {
         toValue: 1,
         duration: 350,
         delay: index * 40,
         useNativeDriver: true,
       }),
-      Animated.spring(translateX, {
+      Animated.spring(entranceX, {
         toValue: 0,
         delay: index * 40,
         tension: 100,
@@ -55,89 +90,380 @@ export function TimelineItem({ log, index }: Props) {
     ]).start();
   }, []);
 
+  // Close this row whenever another row opens
+  useEffect(() => {
+    if (!isSwipeOpen && isOpenRef.current) {
+      isOpenRef.current = false;
+      Animated.spring(swipeX, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 12,
+      }).start();
+    }
+  }, [isSwipeOpen]);
+
+  // ── PanResponder ──────────────────────────────────────────────────────────
+  const panResponder = useRef(
+    PanResponder.create({
+      // Only claim horizontal gestures that are more horizontal than vertical
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 6 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+
+      onPanResponderMove: (_, gs) => {
+        // Offset by current open position so movement feels continuous
+        const base = isOpenRef.current ? -ACTION_WIDTH : 0;
+        const next = Math.max(-ACTION_WIDTH, Math.min(0, base + gs.dx));
+        swipeX.setValue(next);
+      },
+
+      onPanResponderRelease: (_, gs) => {
+        const base        = isOpenRef.current ? -ACTION_WIDTH : 0;
+        const finalOffset = base + gs.dx;
+
+        if (finalOffset < -(ACTION_WIDTH / 2)) {
+          // Snap open
+          isOpenRef.current = true;
+          onSwipeOpen();
+          Animated.spring(swipeX, {
+            toValue: -ACTION_WIDTH,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 12,
+          }).start();
+        } else {
+          // Snap closed
+          isOpenRef.current = false;
+          onSwipeClose();
+          Animated.spring(swipeX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 12,
+          }).start();
+        }
+      },
+    }),
+  ).current;
+
+  // ── Action handlers ───────────────────────────────────────────────────────
+  const closeSwipe = () => {
+    isOpenRef.current = false;
+    onSwipeClose();
+    Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
+  };
+
+  const handleEdit = () => {
+    closeSwipe();
+    onEdit(log);
+  };
+
+  const handleDelete = () => {
+    console.log("[TimelineItem] delete tapped for:", log.id);
+    closeSwipe();
+    setTimeout(() => {
+      Alert.alert(
+        "Delete entry",
+        "Are you sure you want to delete this log? This cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => onDelete(log.id),
+          },
+        ],
+      );
+    }, 100);
+  };
+
+  // ── Display logic ─────────────────────────────────────────────────────────
   const cfg = TYPE_CONFIG[log.type] ?? {
     color: Colors.teal,
     icon: "📝",
     label: log.type,
   };
 
-  // For feed logs, derive subtype label and bottle amount from metadata
+  // Feed sub-type
   const feedType = log.type === "feed"
     ? (log.metadata?.feed_type as string | undefined)
     : undefined;
   const feedLabel =
-    feedType === "nursing" ? "Nursing" :
+    feedType === "nursing" ? "Nursing"    :
     feedType === "bottle"  ? "Bottle Feed" :
     cfg.label;
 
   const bottleAmountMl = feedType === "bottle"
     ? (log.metadata?.amount_ml as number | undefined)
     : undefined;
-  const bottleUnit = (log.metadata?.amount_unit as string | undefined) ?? "ml";
+  const bottleUnit    = (log.metadata?.amount_unit as string | undefined) ?? "ml";
   const bottleDisplay = bottleAmountMl != null
     ? bottleUnit === "oz"
       ? `${(Math.round((bottleAmountMl / 29.5735) * 10) / 10).toFixed(1)} oz`
       : `${bottleAmountMl} ml`
     : undefined;
 
+  // Diaper sub-details
+  const diaperType = log.type === "diaper"
+    ? (log.metadata?.diaper_type as string | undefined)
+    : undefined;
+  const wetAmt   = log.metadata?.wet_amount   as string | undefined;
+  const dirtyAmt = log.metadata?.dirty_amount as string | undefined;
+  const pooType  = log.metadata?.poo_type     as string | undefined;
+
+  const POO_ICON: Record<string, string> = {
+    seedy_yellow: "🌼", tan_brown: "🤎", green: "🟢", orange: "🟠",
+    watery: "💧", mucousy: "🫧", black_dark: "⬛", blood: "🔴",
+  };
+  const POO_LABEL: Record<string, string> = {
+    seedy_yellow: "Seedy/Yellow", tan_brown: "Tan/Brown", green: "Green",
+    orange: "Orange", watery: "Watery", mucousy: "Mucousy",
+    black_dark: "Black/Dark", blood: "Blood",
+  };
+  const AMOUNT_LABEL: Record<string, string> = {
+    little: "Little 🔹", medium: "Medium 🔷", lot: "Lot 💦",
+  };
+
+  const diaperEmoji =
+    diaperType === "wet"   ? "💧"  :
+    diaperType === "dirty" ? "💩"  :
+    diaperType === "both"  ? "💧💩" : null;
+
+  const actionScale = swipeX.interpolate({
+    inputRange: [-ACTION_WIDTH, -ACTION_WIDTH * 0.3, 0],
+    outputRange: [1, 0.6, 0.4],
+    extrapolate: "clamp",
+  });
+  const actionOpacity = swipeX.interpolate({
+    inputRange: [-ACTION_WIDTH, -ACTION_WIDTH * 0.4, 0],
+    outputRange: [1, 0.5, 0],
+    extrapolate: "clamp",
+  });
+
   return (
     <Animated.View
-      style={[styles.row, { opacity, transform: [{ translateX }] }]}
+      style={{
+        opacity: entranceOpacity,
+        transform: [{ translateX: entranceX }],
+      }}
     >
-      {/* Color dot */}
-      <View style={[styles.dot, { backgroundColor: cfg.color }]} />
+      <View style={styles.container}>
 
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Top row: icon + label + badges */}
-        <View style={styles.topRow}>
-          <Text style={{ fontSize: 18 }}>
-            {feedType === "nursing" ? "🤱" : cfg.icon}
-          </Text>
-          <Text style={styles.label}>{feedLabel}</Text>
+        <View style={styles.actions}>
+          <Animated.View
+            style={[
+              styles.actionButtonWrapper,
+              { opacity: actionOpacity, transform: [{ scale: actionScale }] },
+            ]}
+          >
+            <Pressable
+              style={({ pressed }) => [
+                styles.editAction,
+                pressed && styles.actionPressed,
+              ]}
+              onPress={handleEdit}
+            >
+              <View style={styles.actionIconCircle}>
+                <Text style={styles.actionIconText}>✎</Text>
+              </View>
+              <Text style={styles.actionLabel}>Edit</Text>
+            </Pressable>
+          </Animated.View>
 
-          {/* Duration badge */}
-          {log.duration_seconds != null && log.duration_seconds > 0 && (
-            <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
-              <Text style={[styles.badgeText, { color: cfg.color }]}>
-                {formatDuration(log.duration_seconds)}
-              </Text>
-            </View>
-          )}
-
-          {/* Bottle amount badge */}
-          {bottleDisplay && (
-            <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
-              <Text style={[styles.badgeText, { color: cfg.color }]}>
-                {bottleDisplay}
-              </Text>
-            </View>
-          )}
+          <Animated.View
+            style={[
+              styles.actionButtonWrapper,
+              { opacity: actionOpacity, transform: [{ scale: actionScale }] },
+            ]}
+          >
+            <Pressable
+              style={({ pressed }) => [
+                styles.deleteAction,
+                pressed && styles.actionPressed,
+              ]}
+              onPress={handleDelete}
+            >
+              <View style={styles.deleteIconCircle}>
+                <Text style={styles.actionIconText}>✕</Text>
+              </View>
+              <Text style={styles.deleteLabel}>Delete</Text>
+            </Pressable>
+          </Animated.View>
         </View>
 
-        {/* Note */}
-        {log.notes ? <Text style={styles.note}>{log.notes}</Text> : null}
+        {/* ── Swipeable content row ── */}
+        <Animated.View
+          style={[styles.row, { transform: [{ translateX: swipeX }] }]}
+          {...panResponder.panHandlers}
+        >
+          {/* Color dot */}
+          <View style={[styles.dot, { backgroundColor: cfg.color }]} />
 
-        {/* Meta: time · by whom */}
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>{formatTime(log.started_at)}</Text>
-          <Text style={styles.separator}>·</Text>
-          <Text style={styles.meta}>
-            by {log.profile?.display_name ?? "You"}
-          </Text>
-        </View>
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Top row: icon + label + badges */}
+            <View style={styles.topRow}>
+              {log.type === "diaper" && diaperEmoji ? (
+                <Text style={{ fontSize: 18 }}>{diaperEmoji}</Text>
+              ) : feedType === "nursing" ? (
+                <Text style={{ fontSize: 18 }}>🤱</Text>
+              ) : (
+                <cfg.Icon size={22} color={cfg.color} />
+              )}
+              <Text style={styles.label}>
+                {log.type === "diaper" ? cfg.label : feedLabel}
+              </Text>
+
+              {/* Duration badge */}
+              {log.duration_seconds != null && log.duration_seconds > 0 && (
+                <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
+                  <Text style={[styles.badgeText, { color: cfg.color }]}>
+                    {formatDuration(log.duration_seconds)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Bottle amount badge */}
+              {bottleDisplay && (
+                <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
+                  <Text style={[styles.badgeText, { color: cfg.color }]}>
+                    {bottleDisplay}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Diaper detail badges */}
+            {log.type === "diaper" && (wetAmt || dirtyAmt) && (
+              <View style={styles.topRow}>
+                {wetAmt && (
+                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
+                    <Text style={[styles.badgeText, { color: Colors.moss }]}>
+                      💧 {AMOUNT_LABEL[wetAmt] ?? wetAmt}
+                    </Text>
+                  </View>
+                )}
+                {dirtyAmt && (
+                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
+                    <Text style={[styles.badgeText, { color: Colors.moss }]}>
+                      💩 {AMOUNT_LABEL[dirtyAmt] ?? dirtyAmt}
+                    </Text>
+                  </View>
+                )}
+                {pooType && (
+                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
+                    <Text style={[styles.badgeText, { color: Colors.moss }]}>
+                      {POO_ICON[pooType] ?? "💩"} {POO_LABEL[pooType] ?? pooType}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Note */}
+            {log.notes ? <Text style={styles.note}>{log.notes}</Text> : null}
+
+            {/* Meta: time · by whom */}
+            <View style={styles.metaRow}>
+              <Text style={styles.meta}>{formatTime(log.started_at)}</Text>
+              <Text style={styles.separator}>·</Text>
+              <Text style={styles.meta}>
+                by {log.profile?.display_name ?? "You"}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
       </View>
     </Animated.View>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
+  container: {
+    position: "relative",
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.sandDark,
+  },
+  actions: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: ACTION_WIDTH,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    backgroundColor: Colors.cream,
+  },
+  actionButtonWrapper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+  },
+  deleteAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+  },
+  actionPressed: {
+    opacity: 0.6,
+  },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.teal,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#D4534A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionIconText: {
+    fontSize: 16,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  actionLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 11,
+    color: Colors.teal,
+    letterSpacing: 0.3,
+  },
+  deleteLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 11,
+    color: "#D4534A",
+    letterSpacing: 0.3,
+  },
+  // ── Swipeable row ───────────────────────────────────────────────────────
   row: {
     flexDirection: "row",
     gap: 14,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.sandDark,
+    backgroundColor: Colors.cream,
   },
   dot: {
     width: 10,
@@ -185,7 +511,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   meta: {
-    fontFamily: "DM-Mono",
+    fontFamily: "DM-Sans",
     fontSize: 11,
     color: Colors.inkLight,
   },

@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import React from "react";
+import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
   Image,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,12 +18,22 @@ import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 import type { Baby, Milestone } from "../../types";
+import {
+  FeedIcon,
+  SleepIcon,
+  DiaperIcon,
+  MomentIcon,
+} from "../../assets/icons/QuickActionIcons";
 
 export default function BabyScreen() {
   const { profile, activeBaby, setActiveBaby } = useStore();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(activeBaby?.name ?? "");
+  const [milestoneModal, setMilestoneModal] = useState(false);
+  const [milestoneTitle, setMilestoneTitle] = useState("");
+  const [milestoneDesc, setMilestoneDesc] = useState("");
+  const [savingMilestone, setSavingMilestone] = useState(false);
 
   // ── Fetch milestones ──────────────────────────────────────────
   const { data: milestones = [] } = useQuery({
@@ -119,6 +132,31 @@ export default function BabyScreen() {
     setActiveBaby({ ...activeBaby!, photo_url: data.publicUrl });
   };
 
+  const saveMilestone = async () => {
+    if (!milestoneTitle.trim()) {
+      Alert.alert("Missing title", "Please enter a milestone title.");
+      return;
+    }
+    setSavingMilestone(true);
+    const { error } = await supabase.from("milestones").insert({
+      baby_id: activeBaby!.id,
+      family_id: profile!.family_id,
+      logged_by: profile!.id,
+      title: milestoneTitle.trim(),
+      description: milestoneDesc.trim() || null,
+      happened_at: new Date().toISOString(),
+    });
+    setSavingMilestone(false);
+    if (error) {
+      Alert.alert("Error", error.message);
+      return;
+    }
+    setMilestoneTitle("");
+    setMilestoneDesc("");
+    setMilestoneModal(false);
+    queryClient.invalidateQueries({ queryKey: ["milestones", activeBaby!.id] });
+  };
+
   const calcAge = () => {
     if (!activeBaby?.date_of_birth) return "";
     const dob = new Date(activeBaby.date_of_birth);
@@ -132,7 +170,13 @@ export default function BabyScreen() {
     return `${months} months · ${weeks} weeks old`;
   };
 
-  if (!activeBaby) return null;
+  if (!activeBaby) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.cream }}>
+        <ActivityIndicator size="large" color={Colors.teal} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -261,37 +305,27 @@ export default function BabyScreen() {
       {/* ── All-time stats ── */}
       <Text style={styles.sectionLabel}>All-time stats</Text>
       <View style={styles.statsCard}>
-        {[
+        {([
           {
-            icon: "🍼",
+            Icon: FeedIcon,
             label: "Total feeds",
             value: stats?.feed.toLocaleString() ?? "—",
             color: Colors.dusk,
           },
-          { icon: "💤", label: "Total sleep", value: "—", color: Colors.sky },
+          { Icon: SleepIcon, label: "Total sleep", value: "—", color: Colors.sky },
           {
-            icon: "🩲",
+            Icon: DiaperIcon,
             label: "Diaper changes",
             value: stats?.diaper.toLocaleString() ?? "—",
             color: Colors.moss,
           },
           {
-            icon: "⭐",
+            Icon: MomentIcon,
             label: "Milestones",
             value: milestones.length.toString(),
             color: Colors.gold,
           },
-          {
-            icon: "📝",
-            label: "Journal entries",
-            value: stats
-              ? Object.values(stats)
-                  .reduce((a, b) => a + b, 0)
-                  .toLocaleString()
-              : "—",
-            color: Colors.lav,
-          },
-        ].map((s, i, arr) => (
+        ] as const).map((s, i, arr) => (
           <View
             key={s.label}
             style={[styles.statRow, i < arr.length - 1 && styles.statRowBorder]}
@@ -299,7 +333,7 @@ export default function BabyScreen() {
             <View
               style={[styles.statIcon, { backgroundColor: s.color + "18" }]}
             >
-              <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+              <s.Icon size={20} color={s.color} />
             </View>
             <Text style={styles.statLabel}>{s.label}</Text>
             <Text style={[styles.statValue, { color: s.color }]}>
@@ -343,9 +377,64 @@ export default function BabyScreen() {
         </View>
       )}
 
-      <TouchableOpacity style={styles.addMilestoneBtn}>
+      <TouchableOpacity
+        style={styles.addMilestoneBtn}
+        onPress={() => setMilestoneModal(true)}
+      >
         <Text style={styles.addMilestoneBtnText}>+ Add milestone</Text>
       </TouchableOpacity>
+
+      {/* Milestone modal */}
+      <Modal
+        visible={milestoneModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMilestoneModal(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(42,32,24,0.45)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setMilestoneModal(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{ backgroundColor: Colors.cream, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 48 }}
+          >
+            <View style={{ width: 40, height: 4, backgroundColor: Colors.sandDark, borderRadius: 2, alignSelf: "center", marginBottom: 20 }} />
+            <Text style={{ fontFamily: "Cormorant-Garamond", fontSize: 24, fontWeight: "600", color: Colors.ink, textAlign: "center", marginBottom: 20 }}>
+              ⭐ New milestone
+            </Text>
+            <Text style={styles.addMilestoneBtnText}>Title</Text>
+            <TextInput
+              style={{ backgroundColor: Colors.sand, borderWidth: 1.5, borderColor: Colors.sandDark, borderRadius: 14, padding: 14, fontFamily: "DM-Sans", fontSize: 15, color: Colors.ink, marginBottom: 12, marginTop: 6 }}
+              placeholder="e.g. First smile!"
+              placeholderTextColor={Colors.inkLight}
+              value={milestoneTitle}
+              onChangeText={setMilestoneTitle}
+              autoFocus
+            />
+            <Text style={styles.addMilestoneBtnText}>Notes (optional)</Text>
+            <TextInput
+              style={{ backgroundColor: Colors.sand, borderWidth: 1.5, borderColor: Colors.sandDark, borderRadius: 14, padding: 14, fontFamily: "DM-Sans", fontSize: 15, color: Colors.ink, marginBottom: 20, marginTop: 6, minHeight: 80, textAlignVertical: "top" }}
+              placeholder="Any details to remember…"
+              placeholderTextColor={Colors.inkLight}
+              value={milestoneDesc}
+              onChangeText={setMilestoneDesc}
+              multiline
+            />
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.gold, borderRadius: 18, padding: 17, alignItems: "center", opacity: savingMilestone ? 0.6 : 1 }}
+              onPress={saveMilestone}
+              disabled={savingMilestone}
+            >
+              <Text style={{ fontFamily: "DM-Sans", fontWeight: "700", fontSize: 16, color: "white" }}>
+                {savingMilestone ? "Saving…" : "Save milestone ⭐"}
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }

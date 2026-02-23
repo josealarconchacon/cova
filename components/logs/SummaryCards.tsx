@@ -1,6 +1,12 @@
+import React from "react";
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { Colors } from "../../constants/theme";
 import type { Log } from "../../types";
+import {
+  FeedIcon,
+  SleepIcon,
+  DiaperIcon,
+} from "../../assets/icons/QuickActionIcons";
 
 function formatDuration(secs: number): string {
   const h = Math.floor(secs / 3600);
@@ -35,7 +41,7 @@ export function SummaryCards({ logs }: Props) {
 
   const cards = [
     {
-      icon: "🍼",
+      Icon: FeedIcon,
       label: "Feeds today",
       value: feeds.length > 0 ? `${feeds.length}x` : "—",
       sub: lastFeed ? `Last: ${formatTime(lastFeed.started_at)}` : "None yet",
@@ -43,7 +49,7 @@ export function SummaryCards({ logs }: Props) {
       pale: "#F8EDE9",
     },
     {
-      icon: "💤",
+      Icon: SleepIcon,
       label: "Sleep today",
       value: totalSleepSecs > 0 ? formatDuration(totalSleepSecs) : "—",
       sub:
@@ -54,7 +60,7 @@ export function SummaryCards({ logs }: Props) {
       pale: "#EBF2FB",
     },
     {
-      icon: "🩲",
+      Icon: DiaperIcon,
       label: "Last diaper",
       value: lastDiaper?.notes ?? "—",
       sub: lastDiaper ? formatTime(lastDiaper.started_at) : "None today",
@@ -75,7 +81,7 @@ export function SummaryCards({ logs }: Props) {
           key={card.label}
           style={[styles.card, { backgroundColor: card.pale }]}
         >
-          <Text style={styles.cardIcon}>{card.icon}</Text>
+          <card.Icon size={24} color={card.color} />
           <Text style={[styles.cardValue, { color: card.color }]}>
             {card.value}
           </Text>
@@ -101,7 +107,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   cardIcon: {
-    fontSize: 22,
     marginBottom: 8,
   },
   cardValue: {

@@ -1,12 +1,13 @@
+import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Colors } from "../../constants/theme";
+import { FeedIcon, SleepIcon } from "../../assets/icons/QuickActionIcons";
 
-// These match your LogTypes in constants/theme.ts
-const CONFIG: Record<string, { color: string; icon: string; label: string }> = {
-  feed: { color: Colors.dusk, icon: "🍼", label: "Feeding" },
-  sleep: { color: "#5A8FC9", icon: "💤", label: "Sleep" },
+const CONFIG: Record<string, { color: string; Icon: React.FC<{ size?: number; color?: string }>; label: string }> = {
+  feed: { color: Colors.dusk, Icon: FeedIcon, label: "Feeding" },
+  sleep: { color: "#5A8FC9", Icon: SleepIcon, label: "Sleep" },
 };
 
 function pad(n: number) {
@@ -59,13 +60,13 @@ export function TimerBar({ activeLog, onStop }: Props) {
 
   const cfg = CONFIG[activeLog.type] ?? {
     color: Colors.teal,
-    icon: "⏱️",
+    Icon: FeedIcon,
     label: "Timer",
   };
 
   return (
     <View style={[styles.container, { borderLeftColor: cfg.color }]}>
-      <Text style={styles.icon}>{cfg.icon}</Text>
+      <cfg.Icon size={28} color={cfg.color} />
 
       <View style={styles.info}>
         <Text style={[styles.label, { color: cfg.color }]}>
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   icon: {
-    fontSize: 26,
+    marginRight: 2,
   },
   info: {
     flex: 1,

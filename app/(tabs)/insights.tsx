@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import {
   View,
@@ -5,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
@@ -12,15 +14,20 @@ import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 import { useWeeklyStats, type DailyStats } from "../../lib/useWeeklyStats";
 import type { Log } from "../../types";
+import {
+  FeedIcon,
+  SleepIcon,
+  DiaperIcon,
+} from "../../assets/icons/QuickActionIcons";
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type Tab = "feeds" | "sleep" | "diapers";
 
 const TABS = [
-  { id: "feeds" as Tab, icon: "🍼", label: "Feeds", color: Colors.dusk },
-  { id: "sleep" as Tab, icon: "💤", label: "Sleep", color: Colors.sky },
-  { id: "diapers" as Tab, icon: "🩲", label: "Diapers", color: Colors.moss },
+  { id: "feeds" as Tab, Icon: FeedIcon, label: "Feeds", color: Colors.dusk },
+  { id: "sleep" as Tab, Icon: SleepIcon, label: "Sleep", color: Colors.sky },
+  { id: "diapers" as Tab, Icon: DiaperIcon, label: "Diapers", color: Colors.moss },
 ];
 
 const INSIGHTS: Record<
@@ -129,7 +136,13 @@ export default function InsightsScreen() {
     return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   };
 
-  if (!activeBaby) return null;
+  if (!activeBaby) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.cream }}>
+        <ActivityIndicator size="large" color={Colors.teal} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -163,7 +176,7 @@ export default function InsightsScreen() {
             onPress={() => setActiveTab(t.id)}
             activeOpacity={0.85}
           >
-            <Text style={styles.tabIcon}>{t.icon}</Text>
+            <t.Icon size={18} color={activeTab === t.id ? "white" : t.color} />
             <Text
               style={[styles.tabText, activeTab === t.id && { color: "white" }]}
             >

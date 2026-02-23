@@ -23,16 +23,11 @@ export const Colors = {
 } as const;
 
 export const LogTypes = {
-  feed: { icon: "🍼", label: "Feeding", color: "#B07D6C", hasTimer: true },
-  sleep: { icon: "💤", label: "Sleep", color: "#5A8FC9", hasTimer: true },
-  diaper: { icon: "🩲", label: "Diaper", color: "#8FAF72", hasTimer: false },
-  milestone: {
-    icon: "⭐",
-    label: "Milestone",
-    color: "#C9961A",
-    hasTimer: false,
-  },
-  health: { icon: "🏥", label: "Health", color: "#8B7EC8", hasTimer: false },
+  feed: { label: "Feeding", color: "#B07D6C", hasTimer: true },
+  sleep: { label: "Sleep", color: "#5A8FC9", hasTimer: true },
+  diaper: { label: "Diaper", color: "#8FAF72", hasTimer: false },
+  milestone: { label: "Milestone", color: "#C9961A", hasTimer: false },
+  health: { label: "Health", color: "#8B7EC8", hasTimer: false },
 } as const;
 
 export type LogType = keyof typeof LogTypes;
