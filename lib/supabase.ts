@@ -60,6 +60,46 @@ const ChunkedSecureStore = {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
+function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  const merged: RequestInit = {
+    ...init,
+    signal: controller.signal,
+  };
+
+  return fetch(input, merged)
+    .then((res) => {
+      clearTimeout(timer);
+      return res;
+    })
+    .catch((err) => {
+      clearTimeout(timer);
+      if (controller.signal.aborted) {
+        throw new Error("Network request timed out");
+      }
+      throw err;
+    });
+}
+
+export const QUERY_TIMEOUT_MS = 10_000;
+
+export function withTimeout<T>(thenable: PromiseLike<T>, ms = QUERY_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  return Promise.race([
+    Promise.resolve(thenable),
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Query timed out")), ms);
+    }),
+  ]).finally(() => clearTimeout(timer!));
+}
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     storage: ChunkedSecureStore,
@@ -67,4 +107,5 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+  global: { fetch: fetchWithTimeout },
 });
