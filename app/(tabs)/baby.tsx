@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
@@ -32,11 +34,22 @@ import {
   JournalSinceIcon,
 } from "../../assets/icons/BabyInfoIcons";
 
+const PHOTO_BUCKET = "baby-photos";
+
+async function ensureBucket() {
+  const { data } = await supabase.storage.getBucket(PHOTO_BUCKET);
+  if (!data) {
+    await supabase.storage.createBucket(PHOTO_BUCKET, { public: true });
+  }
+}
+
 export default function BabyScreen() {
   const { profile, activeBaby, setActiveBaby } = useStore();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(activeBaby?.name ?? "");
+  const [editProfileModal, setEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhotoUri, setEditPhotoUri] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [milestoneModal, setMilestoneModal] = useState(false);
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [milestoneDesc, setMilestoneDesc] = useState("");
@@ -75,24 +88,15 @@ export default function BabyScreen() {
     },
   });
 
-  // ── Update baby name ──────────────────────────────────────────
-  const updateName = useMutation({
-    mutationFn: async (newName: string) => {
-      const { error } = await supabase
-        .from("babies")
-        .update({ name: newName.trim() })
-        .eq("id", activeBaby!.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setActiveBaby({ ...activeBaby!, name: name.trim() });
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["baby", activeBaby!.id] });
-    },
-  });
+  // ── Open edit profile modal ──────────────────────────────────
+  const openEditProfile = useCallback(() => {
+    setEditName(activeBaby?.name ?? "");
+    setEditPhotoUri(null);
+    setEditProfileModal(true);
+  }, [activeBaby?.name]);
 
-  // ── Upload profile photo ──────────────────────────────────────
-  const pickPhoto = async () => {
+  // ── Pick photo for edit modal ──────────────────────────────
+  const pickEditPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
@@ -103,40 +107,83 @@ export default function BabyScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.85,
     });
 
     if (result.canceled || !result.assets[0]) return;
+    setEditPhotoUri(result.assets[0].uri);
+  };
 
-    const file = result.assets[0];
-    const ext = file.uri.split(".").pop() ?? "jpg";
-    const path = `${activeBaby!.id}/avatar.${ext}`;
-
-    // Upload to Supabase Storage bucket 'baby-photos'
-    const { error: uploadError } = await supabase.storage
-      .from("baby-photos")
-      .upload(
-        path,
-        { uri: file.uri, type: `image/${ext}`, name: path } as any,
-        { upsert: true },
-      );
-
-    if (uploadError) {
-      Alert.alert("Upload failed", uploadError.message);
+  // ── Save profile (name + optional photo) ───────────────────
+  const saveProfile = async () => {
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      Alert.alert("Name required", "Please enter a name for your baby.");
       return;
     }
 
-    const { data } = supabase.storage.from("baby-photos").getPublicUrl(path);
+    setSavingProfile(true);
+    try {
+      const updates: Partial<Baby> = {};
+      const nameChanged = trimmedName !== activeBaby!.name;
+      const photoChanged = !!editPhotoUri;
 
-    await supabase
-      .from("babies")
-      .update({ photo_url: data.publicUrl })
-      .eq("id", activeBaby!.id);
+      if (nameChanged) {
+        updates.name = trimmedName;
+      }
 
-    setActiveBaby({ ...activeBaby!, photo_url: data.publicUrl });
+      if (photoChanged) {
+        await ensureBucket();
+
+        const ext = editPhotoUri!.split(".").pop() ?? "jpg";
+        const contentType = ext === "png" ? "image/png" : "image/jpeg";
+        const path = `${activeBaby!.id}/avatar.${ext}`;
+
+        const response = await fetch(editPhotoUri!);
+        const blob = await response.blob();
+        const arrayBuffer = await new Response(blob).arrayBuffer();
+
+        const { error: uploadError } = await supabase.storage
+          .from(PHOTO_BUCKET)
+          .upload(path, arrayBuffer, {
+            contentType,
+            upsert: true,
+          });
+
+        if (uploadError) {
+          Alert.alert("Upload failed", uploadError.message);
+          setSavingProfile(false);
+          return;
+        }
+
+        const { data } = supabase.storage
+          .from(PHOTO_BUCKET)
+          .getPublicUrl(path);
+        updates.photo_url = `${data.publicUrl}?t=${Date.now()}`;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase
+          .from("babies")
+          .update(updates)
+          .eq("id", activeBaby!.id);
+        if (error) throw error;
+
+        setActiveBaby({ ...activeBaby!, ...updates });
+        queryClient.invalidateQueries({
+          queryKey: ["baby", activeBaby!.id],
+        });
+      }
+
+      setEditProfileModal(false);
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "Something went wrong.");
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const saveMilestone = async () => {
@@ -193,10 +240,11 @@ export default function BabyScreen() {
     >
       {/* ── Hero ── */}
       <View style={styles.hero}>
-        <TouchableOpacity onPress={pickPhoto} style={styles.avatarWrap}>
+        <View style={styles.avatarWrap}>
           {activeBaby.photo_url ? (
             <Image
-              source={{ uri: activeBaby.photo_url }}
+              key={activeBaby.photo_url}
+              source={{ uri: activeBaby.photo_url, cache: "reload" }}
               style={styles.avatarImg}
             />
           ) : (
@@ -204,55 +252,18 @@ export default function BabyScreen() {
               <Text style={{ fontSize: 44 }}>🌙</Text>
             </View>
           )}
-          <View style={styles.editPhotoBadge}>
-            <Text style={{ fontSize: 12 }}>📷</Text>
-          </View>
-        </TouchableOpacity>
+        </View>
 
-        {editing ? (
-          <TextInput
-            style={styles.nameInput}
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            selectTextOnFocus
-          />
-        ) : (
-          <Text style={styles.heroName}>{activeBaby.name}</Text>
-        )}
-
+        <Text style={styles.heroName}>{activeBaby.name}</Text>
         <Text style={styles.heroAge}>{calcAge()}</Text>
 
         <View style={styles.heroBtnRow}>
-          {editing ? (
-            <>
-              <TouchableOpacity
-                style={styles.heroBtnPrimary}
-                onPress={() => updateName.mutate(name)}
-                disabled={updateName.isPending}
-              >
-                <Text style={styles.heroBtnText}>
-                  {updateName.isPending ? "Saving…" : "Save"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.heroBtnGhost}
-                onPress={() => {
-                  setEditing(false);
-                  setName(activeBaby.name);
-                }}
-              >
-                <Text style={styles.heroBtnText}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={styles.heroBtnGhost}
-              onPress={() => setEditing(true)}
-            >
-              <Text style={styles.heroBtnText}>Edit profile</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.heroBtnGhost}
+            onPress={openEditProfile}
+          >
+            <Text style={styles.heroBtnText}>Edit profile</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -391,6 +402,93 @@ export default function BabyScreen() {
         <Text style={styles.addMilestoneBtnText}>+ Add milestone</Text>
       </TouchableOpacity>
 
+      {/* ── Edit Profile modal ── */}
+      <Modal
+        visible={editProfileModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !savingProfile && setEditProfileModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => !savingProfile && setEditProfileModal(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={styles.modalSheet}
+            >
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Edit profile</Text>
+
+              {/* Avatar preview + pick */}
+              <TouchableOpacity
+                style={styles.editAvatarWrap}
+                onPress={pickEditPhoto}
+                activeOpacity={0.75}
+              >
+                {(editPhotoUri || activeBaby.photo_url) ? (
+                  <Image
+                    key={editPhotoUri ?? activeBaby.photo_url}
+                    source={{ uri: editPhotoUri ?? activeBaby.photo_url!, cache: "reload" }}
+                    style={styles.editAvatarImg}
+                  />
+                ) : (
+                  <View style={styles.editAvatarPlaceholder}>
+                    <Text style={{ fontSize: 38 }}>🌙</Text>
+                  </View>
+                )}
+                <View style={styles.editAvatarBadge}>
+                  <Text style={{ fontSize: 14, color: "white" }}>📷</Text>
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.editAvatarHint}>Tap photo to change</Text>
+
+              {/* Name field */}
+              <Text style={styles.fieldLabel}>Name</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Baby's name"
+                placeholderTextColor={Colors.inkLight}
+                autoFocus
+                selectTextOnFocus
+                editable={!savingProfile}
+              />
+
+              {/* Action buttons */}
+              <TouchableOpacity
+                style={[
+                  styles.saveBtn,
+                  savingProfile && { opacity: 0.6 },
+                ]}
+                onPress={saveProfile}
+                disabled={savingProfile}
+              >
+                {savingProfile ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Save changes</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setEditProfileModal(false)}
+                disabled={savingProfile}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Milestone modal */}
       <Modal
         visible={milestoneModal}
@@ -480,33 +578,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.25)",
   },
-  editPhotoBadge: {
-    position: "absolute",
-    bottom: -6,
-    right: -6,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.teal,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  nameInput: {
-    fontFamily: "Cormorant-Garamond",
-    fontSize: 34,
-    fontWeight: "600",
-    color: "white",
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    textAlign: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-    marginBottom: 6,
-  },
   heroName: {
     fontFamily: "Cormorant-Garamond",
     fontSize: 36,
@@ -524,12 +595,6 @@ const styles = StyleSheet.create({
   heroBtnRow: {
     flexDirection: "row",
     gap: 10,
-  },
-  heroBtnPrimary: {
-    backgroundColor: Colors.moss,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
   },
   heroBtnGhost: {
     backgroundColor: "rgba(255,255,255,0.15)",
@@ -695,6 +760,123 @@ const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontWeight: "600",
     fontSize: 14,
+    color: Colors.inkLight,
+  },
+  // ── Edit Profile modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(42,32,24,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: Colors.cream,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 48,
+    alignItems: "center",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.sandDark,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontFamily: "Cormorant-Garamond",
+    fontSize: 26,
+    fontWeight: "600",
+    color: Colors.ink,
+    marginBottom: 24,
+  },
+  editAvatarWrap: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  editAvatarImg: {
+    width: 110,
+    height: 110,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: Colors.teal + "30",
+  },
+  editAvatarPlaceholder: {
+    width: 110,
+    height: 110,
+    borderRadius: 36,
+    backgroundColor: Colors.sand,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: Colors.sandDark,
+  },
+  editAvatarBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.teal,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: Colors.cream,
+  },
+  editAvatarHint: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.inkLight,
+    marginBottom: 24,
+  },
+  fieldLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 13,
+    color: Colors.inkMid,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    alignSelf: "stretch",
+    marginBottom: 6,
+  },
+  fieldInput: {
+    backgroundColor: Colors.sand,
+    borderWidth: 1.5,
+    borderColor: Colors.sandDark,
+    borderRadius: 14,
+    padding: 14,
+    fontFamily: "DM-Sans",
+    fontSize: 16,
+    color: Colors.ink,
+    marginBottom: 24,
+    alignSelf: "stretch",
+  },
+  saveBtn: {
+    backgroundColor: Colors.teal,
+    borderRadius: 18,
+    padding: 17,
+    alignItems: "center",
+    alignSelf: "stretch",
+    marginBottom: 10,
+  },
+  saveBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 16,
+    color: "white",
+  },
+  cancelBtn: {
+    borderRadius: 18,
+    padding: 14,
+    alignItems: "center",
+    alignSelf: "stretch",
+  },
+  cancelBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "600",
+    fontSize: 15,
     color: Colors.inkLight,
   },
 });

@@ -11,6 +11,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Image,
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRealtimeSync } from "../../lib/useRealtimeSync";
@@ -385,9 +386,17 @@ export default function HomeScreen() {
           <Text style={styles.babyAge}>{babyAge()}</Text>
         </View>
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            <Text style={{ fontSize: 24 }}>🌙</Text>
-          </View>
+          {activeBaby.photo_url ? (
+            <Image
+              key={activeBaby.photo_url}
+              source={{ uri: activeBaby.photo_url, cache: "reload" }}
+              style={styles.avatarImg}
+            />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={{ fontSize: 24 }}>🌙</Text>
+            </View>
+          )}
           {/* Green = co-parent online, grey = offline */}
           <View
             style={[
@@ -641,6 +650,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.tealPale,
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
   },
   syncDot: {
     position: "absolute",
