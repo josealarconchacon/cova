@@ -1,0 +1,30 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF0F2"/>
+      <stop offset="100%" stop-color="#FFE4E8"/>
+    </linearGradient>
+    <linearGradient id="cross" x1="18" y1="18" x2="70" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF8FA3"/>
+      <stop offset="100%" stop-color="#E53050"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="10" y1="10" x2="78" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFCDD5"/>
+      <stop offset="100%" stop-color="#FFAAB8"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <!-- Shield shape -->
+  <path d="M44 10 L70 22 L70 48 C70 62 58 72 44 78 C30 72 18 62 18 48 L18 22 Z" fill="url(#shield)" stroke="#FFB3C1" stroke-width="1.2"/>
+  <!-- Shield inner glow -->
+  <path d="M44 16 L64 26 L64 48 C64 59 55 67 44 72 C33 67 24 59 24 48 L24 26 Z" fill="rgba(255,255,255,0.3)"/>
+  <!-- Medical cross -->
+  <rect x="36" y="28" width="16" height="36" rx="5" fill="url(#cross)"/>
+  <rect x="26" y="38" width="36" height="16" rx="5" fill="url(#cross)"/>
+  <!-- Cross shine -->
+  <rect x="38" y="30" width="5" height="12" rx="2.5" fill="white" opacity="0.3"/>
+  <!-- Heartbeat line across the bottom of the shield -->
+  <path d="M24 58 L32 58 L35 52 L38 64 L41 54 L44 58 L47 58 L50 52 L53 62 L56 58 L64 58" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+  <!-- Small heart at top of shield -->
+  <path d="M44 21 C44 21 41.5 18.5 39.8 19.8 C38 21 38 23.5 40.5 25.5 L44 28 L47.5 25.5 C50 23.5 50 21 48.2 19.8 C46.5 18.5 44 21 44 21 Z" fill="white" opacity="0.5"/>
+</svg>

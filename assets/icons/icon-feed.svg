@@ -1,0 +1,38 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF8F0"/>
+      <stop offset="100%" stop-color="#FDEEDD"/>
+    </linearGradient>
+    <linearGradient id="bottle" x1="30" y1="10" x2="58" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B8DCFF"/>
+      <stop offset="100%" stop-color="#6AAEE8"/>
+    </linearGradient>
+    <linearGradient id="nipple" x1="38" y1="8" x2="50" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5C97A"/>
+      <stop offset="100%" stop-color="#E8A030"/>
+    </linearGradient>
+    <linearGradient id="milk" x1="30" y1="50" x2="58" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#EEF6FF" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <!-- Bottle body -->
+  <rect x="30" y="30" width="28" height="46" rx="12" fill="url(#bottle)"/>
+  <!-- Milk fill inside -->
+  <rect x="32" y="52" width="24" height="22" rx="9" fill="url(#milk)"/>
+  <!-- Bottle cap/collar -->
+  <rect x="28" y="25" width="32" height="10" rx="5" fill="#D4EEFF" stroke="#9ACBF0" stroke-width="1"/>
+  <!-- Nipple -->
+  <path d="M38 25 C38 18 50 18 50 25" fill="url(#nipple)"/>
+  <ellipse cx="44" cy="17" rx="5" ry="7" fill="url(#nipple)"/>
+  <!-- Shine on bottle -->
+  <rect x="35" y="34" width="5" height="18" rx="2.5" fill="white" opacity="0.35"/>
+  <!-- Measurement lines -->
+  <line x1="54" y1="42" x2="58" y2="42" stroke="#9ACBF0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="54" y1="50" x2="58" y2="50" stroke="#9ACBF0" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="54" y1="58" x2="58" y2="58" stroke="#9ACBF0" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Nipple hole dot -->
+  <circle cx="44" cy="11" r="1.5" fill="#C87020" opacity="0.6"/>
+</svg>
