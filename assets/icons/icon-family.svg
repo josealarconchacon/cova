@@ -1,0 +1,26 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fBg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#131e1b"/>
+      <stop offset="100%" stop-color="#0e1815"/>
+    </linearGradient>
+    <linearGradient id="fGreen" x1="10" y1="10" x2="78" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9dd4c0"/>
+      <stop offset="100%" stop-color="#4a9080"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="22" fill="url(#fBg)"/>
+  <path d="M44 16 L70 38 L70 68 L18 68 L18 38 Z" stroke="url(#fGreen)" stroke-width="1.5" fill="rgba(126,184,164,0.08)"/>
+  <path d="M44 16 L70 38 L18 38 Z" fill="rgba(126,184,164,0.12)"/>
+  <rect x="38" y="50" width="12" height="18" rx="6" stroke="url(#fGreen)" stroke-width="1.5" fill="rgba(126,184,164,0.1)"/>
+  <rect x="22" y="44" width="10" height="10" rx="2" stroke="url(#fGreen)" stroke-width="1" fill="rgba(126,184,164,0.1)" opacity="0.7"/>
+  <rect x="56" y="44" width="10" height="10" rx="2" stroke="url(#fGreen)" stroke-width="1" fill="rgba(126,184,164,0.1)" opacity="0.7"/>
+  <circle cx="33" cy="27" r="3.5" fill="url(#fGreen)" opacity="0.7"/>
+  <path d="M33 31 C33 31 29 36 30 38 L36 38 C37 36 33 31 33 31 Z" fill="url(#fGreen)" opacity="0.5"/>
+  <circle cx="44" cy="25" r="4" fill="url(#fGreen)" opacity="0.9"/>
+  <path d="M44 29 C44 29 40 34 41 37 L47 37 C48 34 44 29 44 29 Z" fill="url(#fGreen)" opacity="0.7"/>
+  <circle cx="55" cy="27" r="3.5" fill="url(#fGreen)" opacity="0.7"/>
+  <path d="M55 31 C55 31 51 36 52 38 L58 38 C59 36 55 31 55 31 Z" fill="url(#fGreen)" opacity="0.5"/>
+  <line x1="14" y1="68" x2="74" y2="68" stroke="url(#fGreen)" stroke-width="1" opacity="0.3"/>
+  <path d="M44 12 C44 12 42 10 40.5 11 C38.5 12 38.5 15 41 17 L44 19.5 L47 17 C49.5 15 49.5 12 47.5 11 C46 10 44 12 44 12 Z" fill="url(#fGreen)" opacity="0.6"/>
+</svg>
