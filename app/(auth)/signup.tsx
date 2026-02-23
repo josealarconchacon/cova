@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
+import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 
 const ROLES = [
@@ -22,6 +23,7 @@ const ROLES = [
 ];
 
 export default function SignUpScreen() {
+  const setProfile = useStore((s) => s.setProfile);
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -87,35 +89,36 @@ export default function SignUpScreen() {
       return;
     }
 
-    // 2. Create family
-    const { data: family, error: familyError } = await supabase
-      .from("families")
-      .insert({ family_name: `${name.trim()}'s Family` })
-      .select()
-      .single();
-
-    if (familyError) {
-      setLoading(false);
-      Alert.alert("Error creating family", familyError.message);
-      return;
-    }
-
-    // 3. Create profile
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      family_id: family.id,
-      display_name: name.trim(),
-      role,
-    });
+    // 2 + 3. Create family and profile atomically via a SECURITY DEFINER function.
+    // We pass the user ID explicitly because auth.uid() inside the function
+    // can return null if the session JWT isn't attached yet right after signUp().
+    const { data: familyId, error: setupError } = await supabase.rpc(
+      "create_family_and_profile",
+      {
+        p_user_id: data.user.id,
+        p_display_name: name.trim(),
+        p_role: role,
+      },
+    );
 
     setLoading(false);
 
-    if (profileError) {
-      Alert.alert("Error creating profile", profileError.message);
+    if (setupError) {
+      Alert.alert("Setup failed", setupError.message);
       return;
     }
 
-    // 4. Go to onboarding
+    // Fetch and cache the new profile so the store is populated before
+    // we navigate — _layout.tsx won't re-route because we go there directly.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", data.user.id)
+      .single();
+    if (profile) setProfile(profile);
+
+    // Navigate immediately — don't wait for onAuthStateChange, which fires
+    // before the profile exists and would otherwise route back to login.
     router.replace("/onboarding");
   };
 

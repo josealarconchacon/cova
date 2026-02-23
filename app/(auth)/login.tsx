@@ -11,10 +11,14 @@ import {
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
-import { supabase } from "../../lib/supabase";
+import { supabase, withTimeout } from "../../lib/supabase";
+import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
+import type { Baby } from "../../types";
 
 export default function LoginScreen() {
+  const setProfile = useStore((s) => s.setProfile);
+  const setActiveBaby = useStore((s) => s.setActiveBaby);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,18 +32,75 @@ export default function LoginScreen() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      console.log("[login] signing in…");
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    setLoading(false);
+      if (error) {
+        Alert.alert("Sign in failed", error.message);
+        return;
+      }
 
-    if (error) {
-      Alert.alert("Sign in failed", error.message);
-    } else {
-      // RootLayout's onAuthStateChange handles profile load
-      router.replace("/(tabs)/");
+      const userId = authData.user?.id;
+      if (!userId) {
+        Alert.alert("Sign in failed", "Could not retrieve user info.");
+        return;
+      }
+
+      console.log("[login] auth OK, fetching profile…");
+      const { data: profile, error: profileError } = await withTimeout(
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single(),
+      );
+
+      if (profileError || !profile) {
+        console.warn("[login] profile fetch failed:", profileError?.message);
+        await supabase.auth.signOut();
+        Alert.alert(
+          "Account not found",
+          "No profile found. Please sign up first.",
+        );
+        return;
+      }
+
+      setProfile(profile);
+
+      console.log("[login] profile OK, fetching baby…");
+      const { data: babies } = await withTimeout(
+        supabase
+          .from("babies")
+          .select("*")
+          .eq("family_id", profile.family_id)
+          .order("created_at", { ascending: true })
+          .limit(1),
+      );
+
+      const baby = (babies?.[0] as Baby) ?? null;
+      setActiveBaby(baby);
+
+      console.log("[login] navigating to app");
+      router.replace(baby ? "/(tabs)/" : "/onboarding");
+    } catch (e: any) {
+      console.error("[login] error:", e?.message ?? e);
+      const msg = typeof e?.message === "string" ? e.message : "";
+      const isTimeout =
+        e?.name === "AbortError" ||
+        msg.includes("timed out") ||
+        msg.includes("Query timed out");
+      Alert.alert(
+        "Sign in failed",
+        isTimeout
+          ? "The server is taking too long to respond. Please check your connection and try again."
+          : e?.message || "Something went wrong. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 

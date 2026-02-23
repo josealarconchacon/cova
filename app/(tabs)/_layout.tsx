@@ -1,6 +1,13 @@
-import { Text } from "react-native";
 import { Tabs } from "expo-router";
 import { Colors } from "../../constants/theme";
+import {
+  JournalIcon,
+  FamilyIcon,
+  BabyIcon,
+  InsightsIcon,
+} from "../../assets/icons/TabIcons";
+
+const ICON_SIZE = 26;
 
 export default function TabLayout() {
   return (
@@ -22,7 +29,7 @@ export default function TabLayout() {
         options={{
           title: "Journal",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>🌿</Text>
+            <JournalIcon size={ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -31,7 +38,7 @@ export default function TabLayout() {
         options={{
           title: "Family",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>👨‍👩‍👧</Text>
+            <FamilyIcon size={ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -40,7 +47,7 @@ export default function TabLayout() {
         options={{
           title: "Baby",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>🌙</Text>
+            <BabyIcon size={ICON_SIZE} color={color} />
           ),
         }}
       />
@@ -49,7 +56,7 @@ export default function TabLayout() {
         options={{
           title: "Insights",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 22, color }}>📊</Text>
+            <InsightsIcon size={ICON_SIZE} color={color} />
           ),
         }}
       />
