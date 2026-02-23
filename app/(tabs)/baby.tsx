@@ -24,6 +24,13 @@ import {
   DiaperIcon,
   MomentIcon,
 } from "../../assets/icons/QuickActionIcons";
+import {
+  DobIcon,
+  BoyIcon,
+  GirlIcon,
+  AgeIcon,
+  JournalSinceIcon,
+} from "../../assets/icons/BabyInfoIcons";
 
 export default function BabyScreen() {
   const { profile, activeBaby, setActiveBaby } = useStore();
@@ -251,7 +258,7 @@ export default function BabyScreen() {
 
       {/* ── Info grid ── */}
       <View style={styles.grid}>
-        {[
+        {([
           {
             label: "Date of birth",
             value: new Date(activeBaby.date_of_birth).toLocaleDateString(
@@ -262,7 +269,7 @@ export default function BabyScreen() {
                 year: "numeric",
               },
             ),
-            icon: "🎂",
+            Icon: DobIcon,
             color: Colors.dusk,
           },
           {
@@ -273,27 +280,27 @@ export default function BabyScreen() {
                 : activeBaby.sex === "boy"
                   ? "Boy"
                   : "—",
-            icon: "🌸",
-            color: Colors.lav,
+            Icon: activeBaby.sex === "girl" ? GirlIcon : BoyIcon,
+            color: activeBaby.sex === "girl" ? "#E060A0" : "#1976D2",
           },
           {
             label: "Age",
             value: calcAge().split(" ·")[0],
-            icon: "🌱",
+            Icon: AgeIcon,
             color: Colors.moss,
           },
           {
             label: "Journal since",
             value: "Day 1",
-            icon: "📖",
+            Icon: JournalSinceIcon,
             color: Colors.sky,
           },
-        ].map((c) => (
+        ] as const).map((c) => (
           <View
             key={c.label}
             style={[styles.infoCard, { borderColor: c.color + "22" }]}
           >
-            <Text style={{ fontSize: 20, marginBottom: 6 }}>{c.icon}</Text>
+            <c.Icon size={26} color={c.color} />
             <Text style={[styles.infoValue, { color: c.color }]}>
               {c.value}
             </Text>

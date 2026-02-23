@@ -1,13 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRealtimeSync } from "../../lib/useRealtimeSync";
 import { usePresence } from "../../lib/usePresence";
 import { supabase } from "../../lib/supabase";
@@ -16,23 +21,97 @@ import { Colors } from "../../constants/theme";
 import type { Log, Profile } from "../../types";
 
 import { QuickActions } from "../../components/logs/QuickActions";
+import type { BottleFeedData, SleepLogData } from "../../components/logs/QuickActions";
 import { TimerBar } from "../../components/logs/TimerBar";
 import { TimelineItem } from "../../components/logs/TimelineItem";
 import { SummaryCards } from "../../components/logs/SummaryCards";
+import { EditLogModal } from "../../components/logs/EditLogModal";
+import type { EditPayload } from "../../components/logs/EditLogModal";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// ── Day helpers ──────────────────────────────────────────────────────────────
+
+const DAYS_TO_FETCH = 30;
+
+function toLocalDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function dayLabel(dateKey: string): string {
+  const d = new Date(dateKey + "T12:00:00");
+  const now = new Date();
+  const todayKey = toLocalDateKey(now);
+
+  if (dateKey === todayKey) return "Today";
+
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  if (dateKey === toLocalDateKey(y)) return "Yesterday";
+
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+interface DayGroup {
+  key: string;
+  label: string;
+  logs: Log[];
+}
+
+function groupLogsByDay(logs: Log[]): DayGroup[] {
+  const groups = new Map<string, DayGroup>();
+
+  for (const log of logs) {
+    const key = toLocalDateKey(new Date(log.started_at));
+    if (!groups.has(key)) {
+      groups.set(key, { key, label: dayLabel(key), logs: [] });
+    }
+    groups.get(key)!.logs.push(log);
+  }
+
+  return Array.from(groups.values()).sort(
+    (a, b) => b.key.localeCompare(a.key),
+  );
+}
 
 export default function HomeScreen() {
   const { profile, activeBaby, activeLog, setActiveLog } = useStore();
-  const scrollRef = useRef<ScrollView>(null);
+  const queryClient = useQueryClient();
+  const scrollRef   = useRef<ScrollView>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  // ── CRUD state ──────────────────────────────────────────────────────────
+  const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
+  const [editingLog,  setEditingLog]  = useState<Log | null>(null);
 
-  // ── Fetch today's logs ──────────────────────────────────────────
+  const today = toLocalDateKey(new Date());
+
+  const sinceDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - DAYS_TO_FETCH);
+    return toLocalDateKey(d);
+  }, []);
+
+  const logsQueryKey = useMemo(
+    () => ["logs", activeBaby?.id, sinceDate],
+    [activeBaby?.id, sinceDate],
+  );
+
+  // ── Fetch recent logs ───────────────────────────────────────────
   const {
-    data: logs = [],
+    data: allLogs = [],
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["logs", activeBaby?.id, today],
+    queryKey: logsQueryKey,
     enabled: !!activeBaby,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,13 +123,20 @@ export default function HomeScreen() {
         `,
         )
         .eq("baby_id", activeBaby!.id)
-        .gte("started_at", today + "T00:00:00")
+        .gte("started_at", sinceDate + "T00:00:00")
         .order("started_at", { ascending: false });
 
       if (error) throw error;
       return data as Log[];
     },
   });
+
+  const todayLogs = useMemo(
+    () => allLogs.filter((l) => toLocalDateKey(new Date(l.started_at)) === today),
+    [allLogs, today],
+  );
+
+  const dayGroups = useMemo(() => groupLogsByDay(allLogs), [allLogs]);
 
   // ── Family members (for co-parent presence dot) ─────────────────
   const { data: members = [] } = useQuery<Profile[]>({
@@ -76,12 +162,15 @@ export default function HomeScreen() {
     familyId: profile?.family_id ?? "",
     babyId: activeBaby?.id ?? "",
     table: "logs",
-    queryKey: ["logs", activeBaby?.id, today],
+    queryKey: logsQueryKey,
   });
 
   // ── Start a timed log ───────────────────────────────────────────
-  const startTimer = async (type: "feed" | "sleep") => {
+  // startedAt is optional — nursing can supply a backdated start time
+  const startTimer = async (type: "feed" | "sleep", startedAt?: string) => {
     if (activeLog) return; // one timer at a time
+
+    const started = startedAt ?? new Date().toISOString();
 
     const { data, error } = await supabase
       .from("logs")
@@ -90,8 +179,9 @@ export default function HomeScreen() {
         baby_id: activeBaby!.id,
         family_id: profile!.family_id,
         logged_by: profile!.id,
-        started_at: new Date().toISOString(),
+        started_at: started,
         ended_at: null,
+        metadata: type === "feed" ? { feed_type: "nursing" } : null,
       })
       .select()
       .single();
@@ -100,10 +190,68 @@ export default function HomeScreen() {
       setActiveLog({
         id: data.id,
         type,
-        started_at: data.started_at,
+        started_at: started,
         baby_id: activeBaby!.id,
       });
     }
+  };
+
+  // ── Log a bottle feed (instant, no timer) ───────────────────────
+  const logBottleFeed = async (data: BottleFeedData) => {
+    const durationSeconds =
+      data.ended_at
+        ? Math.max(
+            0,
+            Math.floor(
+              (new Date(data.ended_at).getTime() -
+                new Date(data.started_at).getTime()) /
+                1000,
+            ),
+          )
+        : null;
+
+    await supabase.from("logs").insert({
+      type: "feed",
+      baby_id: activeBaby!.id,
+      family_id: profile!.family_id,
+      logged_by: profile!.id,
+      started_at: data.started_at,
+      ended_at: data.ended_at,
+      duration_seconds: durationSeconds,
+      notes: data.notes || null,
+      metadata: {
+        feed_type: "bottle",
+        milk_type: data.milk_type,
+        amount_ml: data.amount_ml,
+        amount_unit: data.amount_unit,
+      },
+    });
+  };
+
+  // ── Log a completed sleep (past sleep with start + end) ─────────
+  const logSleep = async (data: SleepLogData) => {
+    const durationSeconds = Math.max(
+      0,
+      Math.floor(
+        (new Date(data.ended_at).getTime() -
+          new Date(data.started_at).getTime()) /
+          1000,
+      ),
+    );
+
+    await supabase.from("logs").insert({
+      type: "sleep",
+      baby_id: activeBaby!.id,
+      family_id: profile!.family_id,
+      logged_by: profile!.id,
+      started_at: data.started_at,
+      ended_at: data.ended_at,
+      duration_seconds: durationSeconds,
+      notes: data.notes || null,
+    });
+
+    queryClient.invalidateQueries({ queryKey: logsQueryKey });
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   // ── Stop a timed log ────────────────────────────────────────────
@@ -139,6 +287,63 @@ export default function HomeScreen() {
     });
   };
 
+  // ── Delete a log ────────────────────────────────────────────────────────
+  const handleDelete = async (id: string) => {
+    const previous = queryClient.getQueryData<Log[]>(logsQueryKey);
+
+    queryClient.setQueryData<Log[]>(logsQueryKey, (old) =>
+      old ? old.filter((l) => l.id !== id) : [],
+    );
+
+    try {
+      console.log("[delete] deleting log:", id);
+      const { data, error } = await supabase
+        .from("logs")
+        .delete()
+        .eq("id", id)
+        .select("id");
+
+      if (error) {
+        console.warn("[delete] error:", error.message);
+        queryClient.setQueryData(logsQueryKey, previous);
+        Alert.alert("Error", "Could not delete the entry. Please try again.");
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn("[delete] no rows deleted (RLS or row not found)");
+        queryClient.setQueryData(logsQueryKey, previous);
+        Alert.alert(
+          "Delete failed",
+          "You may not have permission to delete this entry.",
+        );
+        return;
+      }
+
+      console.log("[delete] success");
+      queryClient.invalidateQueries({ queryKey: logsQueryKey });
+    } catch (e: any) {
+      console.error("[delete] unexpected error:", e?.message);
+      queryClient.setQueryData(logsQueryKey, previous);
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    }
+  };
+
+  // ── Save edits to a log ──────────────────────────────────────────────────
+  const handleSaveEdit = async (payload: EditPayload) => {
+    if (!editingLog) return;
+    const { error } = await supabase
+      .from("logs")
+      .update(payload)
+      .eq("id", editingLog.id);
+    if (error) {
+      Alert.alert("Error", "Could not save your changes. Please try again.");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: logsQueryKey });
+    setEditingLog(null);
+  };
+
   const greeting = () => {
     const h = new Date().getHours();
     if (h < 12) return "Good morning";
@@ -160,7 +365,13 @@ export default function HomeScreen() {
     return `${months} months · ${weeks} weeks old`;
   };
 
-  if (!activeBaby) return null;
+  if (!activeBaby) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.cream }}>
+        <ActivityIndicator size="large" color={Colors.teal} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -206,8 +417,8 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Summary cards */}
-        <SummaryCards logs={logs} />
+        {/* Summary cards (today only) */}
+        <SummaryCards logs={todayLogs} />
 
         {/* Active timer bar */}
         {activeLog && <TimerBar activeLog={activeLog} onStop={stopTimer} />}
@@ -217,36 +428,174 @@ export default function HomeScreen() {
           activeTimerType={activeLog?.type ?? null}
           onTimerAction={startTimer}
           onInstantLog={logInstant}
+          onFeedLog={logBottleFeed}
+          onSleepLog={logSleep}
         />
 
         {/* Timeline header */}
         <View style={styles.timelineHeader}>
-          <Text style={styles.timelineTitle}>Today's Journal</Text>
+          <Text style={styles.timelineTitle}>Journal</Text>
           <View style={styles.syncBadge}>
             <View style={styles.syncDotSmall} />
             <Text style={styles.syncText}>Synced</Text>
           </View>
         </View>
 
-        {/* Timeline entries */}
-        {logs.map((log, i) => (
-          <TimelineItem key={log.id} log={log} index={i} />
+        {/* Daily grouped timeline */}
+        {dayGroups.map((day) => (
+          <DaySection
+            key={day.key}
+            day={day}
+            defaultExpanded={day.key === today}
+            swipeOpenId={swipeOpenId}
+            onSwipeOpen={setSwipeOpenId}
+            onSwipeClose={() => setSwipeOpenId(null)}
+            onEdit={(l) => setEditingLog(l)}
+            onDelete={handleDelete}
+          />
         ))}
 
         {/* Empty state */}
-        {logs.length === 0 && !isLoading && (
+        {allLogs.length === 0 && !isLoading && (
           <View style={styles.empty}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>🌱</Text>
-            <Text style={styles.emptyTitle}>No entries yet today</Text>
+            <Text style={styles.emptyTitle}>No entries yet</Text>
             <Text style={styles.emptyBody}>
               Tap an action above to get started
             </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* ── Edit modal ── */}
+      {editingLog && (
+        <EditLogModal
+          log={editingLog}
+          onClose={() => setEditingLog(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </View>
   );
 }
+
+// ── Collapsible day section ──────────────────────────────────────────────────
+
+interface DaySectionProps {
+  day: DayGroup;
+  defaultExpanded: boolean;
+  swipeOpenId: string | null;
+  onSwipeOpen: (id: string) => void;
+  onSwipeClose: () => void;
+  onEdit: (log: Log) => void;
+  onDelete: (id: string) => void;
+}
+
+function DaySection({
+  day,
+  defaultExpanded,
+  swipeOpenId,
+  onSwipeOpen,
+  onSwipeClose,
+  onEdit,
+  onDelete,
+}: DaySectionProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const toggle = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  }, []);
+
+  return (
+    <View style={ds.container}>
+      <TouchableOpacity
+        style={ds.header}
+        onPress={toggle}
+        activeOpacity={0.7}
+      >
+        <View style={ds.headerLeft}>
+          <Text style={ds.chevron}>{expanded ? "▼" : "▶"}</Text>
+          <Text style={ds.title}>{day.label}</Text>
+        </View>
+        <View style={ds.badge}>
+          <Text style={ds.badgeText}>
+            {day.logs.length} {day.logs.length === 1 ? "entry" : "entries"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={ds.body}>
+          {day.logs.map((log, i) => (
+            <TimelineItem
+              key={log.id}
+              log={log}
+              index={i}
+              isSwipeOpen={swipeOpenId === log.id}
+              onSwipeOpen={() => onSwipeOpen(log.id)}
+              onSwipeClose={onSwipeClose}
+              onEdit={(l) => onEdit(l)}
+              onDelete={onDelete}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const ds = StyleSheet.create({
+  container: {
+    marginBottom: 10,
+    backgroundColor: Colors.cream,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: "hidden",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  chevron: {
+    fontSize: 10,
+    color: Colors.ink,
+  },
+  title: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 15,
+    color: Colors.ink,
+  },
+  badge: {
+    backgroundColor: Colors.tealPale,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    fontFamily: "DM-Sans",
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.teal,
+  },
+  body: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
