@@ -1,0 +1,23 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0F8FF"/>
+      <stop offset="100%" stop-color="#DCEEFF"/>
+    </linearGradient>
+    <linearGradient id="drop1" x1="22" y1="24" x2="40" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#90D4FF"/>
+      <stop offset="100%" stop-color="#1A7EC8"/>
+    </linearGradient>
+    <linearGradient id="drop2" x1="48" y1="30" x2="66" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#B8E4FF"/>
+      <stop offset="100%" stop-color="#3A9EE8"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <!-- Drop 1 (larger, left) -->
+  <path d="M31 20 C31 20 18 38 18 50 C18 58 24 66 31 66 C38 66 44 58 44 50 C44 38 31 20 31 20 Z" fill="url(#drop1)"/>
+  <ellipse cx="24" cy="36" rx="3" ry="7" fill="white" opacity="0.3" transform="rotate(-20 24 36)"/>
+  <!-- Drop 2 (smaller, right) -->
+  <path d="M57 28 C57 28 48 42 48 52 C48 58 52 64 57 64 C62 64 66 58 66 52 C66 42 57 28 57 28 Z" fill="url(#drop2)"/>
+  <ellipse cx="51" cy="40" rx="2.5" ry="6" fill="white" opacity="0.3" transform="rotate(-20 51 40)"/>
+</svg>

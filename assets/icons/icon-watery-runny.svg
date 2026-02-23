@@ -1,0 +1,25 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0F8FF"/>
+      <stop offset="100%" stop-color="#DCEEFF"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="30" y1="10" x2="58" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C8EEFF"/>
+      <stop offset="100%" stop-color="#4AB0F0"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <!-- Main tall thin drop -->
+  <path d="M44 10 C44 10 28 36 28 54 C28 64 35 74 44 74 C53 74 60 64 60 54 C60 36 44 10 44 10 Z" fill="url(#drop)" opacity="0.7"/>
+  <!-- Drip streak running down -->
+  <path d="M44 70 C44 70 46 76 46 80 C46 82 45 84 44 84 C43 84 42 82 42 80 C42 76 44 70 44 70 Z" fill="url(#drop)" opacity="0.5"/>
+  <!-- Side splash small drops -->
+  <path d="M30 58 C30 58 24 55 22 58 C22 60 24 62 26 61 C28 60 30 58 30 58 Z" fill="url(#drop)" opacity="0.5"/>
+  <path d="M58 58 C58 58 64 55 66 58 C66 60 64 62 62 61 C60 60 58 58 58 58 Z" fill="url(#drop)" opacity="0.5"/>
+  <!-- Ripple at bottom -->
+  <ellipse cx="44" cy="74" rx="16" ry="4" fill="url(#drop)" opacity="0.2"/>
+  <ellipse cx="44" cy="74" rx="22" ry="5" fill="none" stroke="url(#drop)" stroke-width="1" opacity="0.3"/>
+  <!-- Shine -->
+  <ellipse cx="37" cy="30" rx="3" ry="8" fill="white" opacity="0.35" transform="rotate(-15 37 30)"/>
+</svg>

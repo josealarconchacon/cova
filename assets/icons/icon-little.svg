@@ -1,0 +1,16 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0F8FF"/>
+      <stop offset="100%" stop-color="#DCEEFF"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="36" y1="28" x2="52" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#90D4FF"/>
+      <stop offset="100%" stop-color="#1A7EC8"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <!-- Single small drop centered -->
+  <path d="M44 26 C44 26 34 40 34 50 C34 56 38 62 44 62 C50 62 54 56 54 50 C54 40 44 26 44 26 Z" fill="url(#drop)"/>
+  <ellipse cx="39" cy="40" rx="3" ry="6" fill="white" opacity="0.3" transform="rotate(-20 39 40)"/>
+</svg>

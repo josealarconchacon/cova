@@ -1,0 +1,24 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFDF0"/>
+      <stop offset="100%" stop-color="#FFF8D0"/>
+    </linearGradient>
+    <linearGradient id="circle" x1="18" y1="18" x2="70" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFE87A"/>
+      <stop offset="100%" stop-color="#F0C020"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+  <circle cx="44" cy="44" r="28" fill="url(#circle)"/>
+  <!-- Seeds scattered inside -->
+  <ellipse cx="36" cy="36" rx="3" ry="5" fill="#C8900A" opacity="0.6" transform="rotate(20 36 36)"/>
+  <ellipse cx="50" cy="34" rx="3" ry="5" fill="#C8900A" opacity="0.6" transform="rotate(-30 50 34)"/>
+  <ellipse cx="32" cy="50" rx="3" ry="5" fill="#C8900A" opacity="0.6" transform="rotate(45 32 50)"/>
+  <ellipse cx="52" cy="50" rx="3" ry="5" fill="#C8900A" opacity="0.6" transform="rotate(-10 52 50)"/>
+  <ellipse cx="44" cy="56" rx="3" ry="5" fill="#C8900A" opacity="0.6" transform="rotate(60 44 56)"/>
+  <ellipse cx="40" cy="44" rx="3" ry="5" fill="#C8900A" opacity="0.5" transform="rotate(-50 40 44)"/>
+  <ellipse cx="56" cy="42" rx="2.5" ry="4" fill="#C8900A" opacity="0.5" transform="rotate(15 56 42)"/>
+  <!-- Shine -->
+  <ellipse cx="34" cy="32" rx="6" ry="4" fill="white" opacity="0.3" transform="rotate(-30 34 32)"/>
+</svg>

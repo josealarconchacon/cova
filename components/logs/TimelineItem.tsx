@@ -19,6 +19,19 @@ import {
   HealthIcon,
   BreastMilkIcon,
 } from "../../assets/icons/QuickActionIcons";
+import {
+  WetIcon,
+  DirtyIcon,
+  BothIcon,
+  SeedyYellowIcon,
+  TanBrownIcon,
+  GreenIcon,
+  OrangeIcon,
+  WateryRunnyIcon,
+  MucousyIcon,
+  BlackDarkIcon,
+  BloodRedIcon,
+} from "../../assets/icons/DiaperIcons";
 
 const ACTION_WIDTH = 140;
 
@@ -212,9 +225,13 @@ export function TimelineItem({
   const dirtyAmt = log.metadata?.dirty_amount as string | undefined;
   const pooType  = log.metadata?.poo_type     as string | undefined;
 
-  const POO_ICON: Record<string, string> = {
-    seedy_yellow: "🌼", tan_brown: "🤎", green: "🟢", orange: "🟠",
-    watery: "💧", mucousy: "🫧", black_dark: "⬛", blood: "🔴",
+  const DIAPER_TYPE_ICON: Record<string, React.FC<{ size?: number; color?: string }>> = {
+    wet: WetIcon, dirty: DirtyIcon, both: BothIcon,
+  };
+  const POO_ICON: Record<string, React.FC<{ size?: number; color?: string }>> = {
+    seedy_yellow: SeedyYellowIcon, tan_brown: TanBrownIcon, green: GreenIcon,
+    orange: OrangeIcon, watery: WateryRunnyIcon, mucousy: MucousyIcon,
+    black_dark: BlackDarkIcon, blood: BloodRedIcon,
   };
   const POO_LABEL: Record<string, string> = {
     seedy_yellow: "Seedy/Yellow", tan_brown: "Tan/Brown", green: "Green",
@@ -222,13 +239,10 @@ export function TimelineItem({
     black_dark: "Black/Dark", blood: "Blood",
   };
   const AMOUNT_LABEL: Record<string, string> = {
-    little: "Little 🔹", medium: "Medium 🔷", lot: "Lot 💦",
+    little: "Little", medium: "Medium", lot: "Lot",
   };
 
-  const diaperEmoji =
-    diaperType === "wet"   ? "💧"  :
-    diaperType === "dirty" ? "💩"  :
-    diaperType === "both"  ? "💧💩" : null;
+  const DiaperTypeIcon = diaperType ? DIAPER_TYPE_ICON[diaperType] : null;
 
   const actionScale = swipeX.interpolate({
     inputRange: [-ACTION_WIDTH, -ACTION_WIDTH * 0.3, 0],
@@ -304,8 +318,8 @@ export function TimelineItem({
           <View style={styles.content}>
             {/* Top row: icon + label + badges */}
             <View style={styles.topRow}>
-              {log.type === "diaper" && diaperEmoji ? (
-                <Text style={{ fontSize: 18 }}>{diaperEmoji}</Text>
+              {log.type === "diaper" && DiaperTypeIcon ? (
+                <DiaperTypeIcon size={20} color={cfg.color} />
               ) : feedType === "nursing" ? (
                 <BreastMilkIcon size={22} color={cfg.color} />
               ) : (
@@ -338,26 +352,32 @@ export function TimelineItem({
             {log.type === "diaper" && (wetAmt || dirtyAmt) && (
               <View style={styles.topRow}>
                 {wetAmt && (
-                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
+                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22", flexDirection: "row", alignItems: "center", gap: 3 }]}>
+                    <WetIcon size={12} color={Colors.moss} />
                     <Text style={[styles.badgeText, { color: Colors.moss }]}>
-                      💧 {AMOUNT_LABEL[wetAmt] ?? wetAmt}
+                      {AMOUNT_LABEL[wetAmt] ?? wetAmt}
                     </Text>
                   </View>
                 )}
                 {dirtyAmt && (
-                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
+                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22", flexDirection: "row", alignItems: "center", gap: 3 }]}>
+                    <DirtyIcon size={12} color={Colors.moss} />
                     <Text style={[styles.badgeText, { color: Colors.moss }]}>
-                      💩 {AMOUNT_LABEL[dirtyAmt] ?? dirtyAmt}
+                      {AMOUNT_LABEL[dirtyAmt] ?? dirtyAmt}
                     </Text>
                   </View>
                 )}
-                {pooType && (
-                  <View style={[styles.badge, { backgroundColor: "#3D7A6E22" }]}>
-                    <Text style={[styles.badgeText, { color: Colors.moss }]}>
-                      {POO_ICON[pooType] ?? "💩"} {POO_LABEL[pooType] ?? pooType}
-                    </Text>
-                  </View>
-                )}
+                {pooType && (() => {
+                  const PooIconComponent = POO_ICON[pooType];
+                  return (
+                    <View style={[styles.badge, { backgroundColor: "#3D7A6E22", flexDirection: "row", alignItems: "center", gap: 3 }]}>
+                      {PooIconComponent && <PooIconComponent size={12} />}
+                      <Text style={[styles.badgeText, { color: Colors.moss }]}>
+                        {POO_LABEL[pooType] ?? pooType}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
             )}
 

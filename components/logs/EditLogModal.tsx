@@ -19,6 +19,25 @@ import {
   FormulaIcon,
   OtherLiquidIcon,
 } from "../../assets/icons/QuickActionIcons";
+import {
+  WetIcon,
+  DirtyIcon,
+  BothIcon,
+  LittleIcon,
+  MediumIcon,
+  LotIcon,
+  DirtyLittleIcon,
+  DirtyMediumIcon,
+  DirtyLotIcon,
+  SeedyYellowIcon,
+  TanBrownIcon,
+  GreenIcon,
+  OrangeIcon,
+  WateryRunnyIcon,
+  MucousyIcon,
+  BlackDarkIcon,
+  BloodRedIcon,
+} from "../../assets/icons/DiaperIcons";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -32,25 +51,31 @@ const MILK_OPTIONS = [
   { id: "other"      as const, Icon: OtherLiquidIcon, label: "Other",       color: "#7B1FA2"  },
 ];
 
-const AMOUNTS = [
-  { label: "Little", value: "little", icon: "🔹" },
-  { label: "Medium", value: "medium", icon: "🔷" },
-  { label: "Lot",    value: "lot",    icon: "💦" },
-] as const;
+const WET_AMOUNTS = [
+  { label: "Little", value: "little" as const, Icon: LittleIcon },
+  { label: "Medium", value: "medium" as const, Icon: MediumIcon },
+  { label: "Lot",    value: "lot"    as const, Icon: LotIcon },
+];
+
+const DIRTY_AMOUNTS = [
+  { label: "Little", value: "little" as const, Icon: DirtyLittleIcon },
+  { label: "Medium", value: "medium" as const, Icon: DirtyMediumIcon },
+  { label: "Lot",    value: "lot"    as const, Icon: DirtyLotIcon },
+];
 
 const POO_TYPES = [
-  { value: "seedy_yellow", label: "Seedy/Yellow",  icon: "🌼", badge: "Normal",     badgeColor: Colors.moss  },
-  { value: "tan_brown",    label: "Tan/Brown",     icon: "🤎", badge: "Normal",     badgeColor: Colors.moss  },
-  { value: "green",        label: "Green",         icon: "🟢", badge: "Monitor",    badgeColor: "#C9961A"    },
-  { value: "orange",       label: "Orange",        icon: "🟠", badge: "Normal",     badgeColor: Colors.moss  },
-  { value: "watery",       label: "Watery/Runny",  icon: "💧", badge: "Monitor",    badgeColor: "#C9961A"    },
-  { value: "mucousy",      label: "Mucousy",       icon: "🫧", badge: "Monitor",    badgeColor: "#C9961A"    },
-  { value: "black_dark",   label: "Black/Dark",    icon: "⬛", badge: "Flag",       badgeColor: Colors.dusk  },
-  { value: "blood",        label: "Blood/Red",     icon: "🔴", badge: "See doctor", badgeColor: "#C0392B"    },
-] as const;
+  { value: "seedy_yellow" as const, label: "Seedy/Yellow",  Icon: SeedyYellowIcon, badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "tan_brown"    as const, label: "Tan/Brown",     Icon: TanBrownIcon,    badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "green"        as const, label: "Green",         Icon: GreenIcon,       badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "orange"       as const, label: "Orange",        Icon: OrangeIcon,      badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "watery"       as const, label: "Watery/Runny",  Icon: WateryRunnyIcon, badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "mucousy"      as const, label: "Mucousy",       Icon: MucousyIcon,     badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "black_dark"   as const, label: "Black/Dark",    Icon: BlackDarkIcon,   badge: "Flag",       badgeColor: Colors.dusk  },
+  { value: "blood"        as const, label: "Blood/Red",     Icon: BloodRedIcon,    badge: "See doctor", badgeColor: "#C0392B"    },
+];
 
 type AmountValue  = "little" | "medium" | "lot";
-type PooTypeValue = (typeof POO_TYPES)[number]["value"];
+type PooTypeValue = "seedy_yellow" | "tan_brown" | "green" | "orange" | "watery" | "mucousy" | "black_dark" | "blood";
 type MilkType     = "breast_milk" | "formula" | "other";
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -285,10 +310,10 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
                   <Text style={s.label}>Type</Text>
                   <View style={s.optionRow}>
                     {([
-                      { label: "Wet 💧",  value: "wet"   },
-                      { label: "Dirty 💩", value: "dirty" },
-                      { label: "Both 🌊",  value: "both"  },
-                    ] as const).map((o) => (
+                      { label: "Wet",   value: "wet"   as const, Icon: WetIcon   },
+                      { label: "Dirty", value: "dirty" as const, Icon: DirtyIcon },
+                      { label: "Both",  value: "both"  as const, Icon: BothIcon  },
+                    ]).map((o) => (
                       <TouchableOpacity
                         key={o.value}
                         style={[
@@ -302,6 +327,7 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
                           setPooType(null);
                         }}
                       >
+                        <o.Icon size={22} />
                         <Text
                           style={[
                             s.optionLabel,
@@ -316,15 +342,15 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
 
                   {showWet && (
                     <>
-                      <Text style={s.label}>💧 Wet — how much?</Text>
+                      <Text style={s.label}>Wet — how much?</Text>
                       <View style={s.amtRow}>
-                        {AMOUNTS.map((a) => (
+                        {WET_AMOUNTS.map((a) => (
                           <TouchableOpacity
                             key={a.value}
                             style={[s.amtBtn, wetAmt === a.value && s.amtBtnActive]}
                             onPress={() => setWetAmt(a.value)}
                           >
-                            <Text>{a.icon}</Text>
+                            <a.Icon size={22} />
                             <Text
                               style={[
                                 s.amtLabel,
@@ -341,15 +367,15 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
 
                   {showDirty && (
                     <>
-                      <Text style={s.label}>💩 Dirty — how much?</Text>
+                      <Text style={s.label}>Dirty — how much?</Text>
                       <View style={s.amtRow}>
-                        {AMOUNTS.map((a) => (
+                        {DIRTY_AMOUNTS.map((a) => (
                           <TouchableOpacity
                             key={a.value}
                             style={[s.amtBtn, dirtyAmt === a.value && s.amtBtnActive]}
                             onPress={() => setDirtyAmt(a.value)}
                           >
-                            <Text>{a.icon}</Text>
+                            <a.Icon size={22} />
                             <Text
                               style={[
                                 s.amtLabel,
@@ -375,7 +401,7 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
                             style={[s.pooBtn, pooType === p.value && s.pooBtnActive]}
                             onPress={() => setPooType(p.value)}
                           >
-                            <Text style={{ fontSize: 20 }}>{p.icon}</Text>
+                            <p.Icon size={26} />
                             <Text
                               style={[
                                 s.pooLabel,

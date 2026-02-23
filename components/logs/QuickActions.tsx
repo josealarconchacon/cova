@@ -25,6 +25,25 @@ import {
   FormulaIcon,
   OtherLiquidIcon,
 } from "../../assets/icons/QuickActionIcons";
+import {
+  WetIcon,
+  DirtyIcon,
+  BothIcon,
+  LittleIcon,
+  MediumIcon,
+  LotIcon,
+  DirtyLittleIcon,
+  DirtyMediumIcon,
+  DirtyLotIcon,
+  SeedyYellowIcon,
+  TanBrownIcon,
+  GreenIcon,
+  OrangeIcon,
+  WateryRunnyIcon,
+  MucousyIcon,
+  BlackDarkIcon,
+  BloodRedIcon,
+} from "../../assets/icons/DiaperIcons";
 
 const ACTION_ICON_SIZE = 30;
 
@@ -736,25 +755,31 @@ interface DiaperProps {
   onSave: (type: string, note: string, meta: Record<string, unknown>) => void;
 }
 
-const AMOUNTS = [
-  { label: "Little",  value: "little", icon: "🔹" },
-  { label: "Medium",  value: "medium", icon: "🔷" },
-  { label: "Lot",     value: "lot",    icon: "💦" },
-] as const;
+const WET_AMOUNTS = [
+  { label: "Little",  value: "little"  as const, Icon: LittleIcon },
+  { label: "Medium",  value: "medium"  as const, Icon: MediumIcon },
+  { label: "Lot",     value: "lot"     as const, Icon: LotIcon },
+];
+
+const DIRTY_AMOUNTS = [
+  { label: "Little",  value: "little"  as const, Icon: DirtyLittleIcon },
+  { label: "Medium",  value: "medium"  as const, Icon: DirtyMediumIcon },
+  { label: "Lot",     value: "lot"     as const, Icon: DirtyLotIcon },
+];
 
 const POO_TYPES = [
-  { value: "seedy_yellow",  label: "Seedy / Yellow",   icon: "🌼", badge: "Normal",   badgeColor: Colors.moss  },
-  { value: "tan_brown",     label: "Tan / Brown",      icon: "🤎", badge: "Normal",   badgeColor: Colors.moss  },
-  { value: "green",         label: "Green",            icon: "🟢", badge: "Monitor",  badgeColor: "#C9961A"    },
-  { value: "orange",        label: "Orange",           icon: "🟠", badge: "Normal",   badgeColor: Colors.moss  },
-  { value: "watery",        label: "Watery / Runny",   icon: "💧", badge: "Monitor",  badgeColor: "#C9961A"    },
-  { value: "mucousy",       label: "Mucousy",          icon: "🫧", badge: "Monitor",  badgeColor: "#C9961A"    },
-  { value: "black_dark",    label: "Black / Dark",     icon: "⬛", badge: "Flag",     badgeColor: Colors.dusk  },
-  { value: "blood",         label: "Blood / Red",      icon: "🔴", badge: "See doctor", badgeColor: "#C0392B"  },
-] as const;
+  { value: "seedy_yellow" as const, label: "Seedy / Yellow",  Icon: SeedyYellowIcon, badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "tan_brown"    as const, label: "Tan / Brown",     Icon: TanBrownIcon,    badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "green"        as const, label: "Green",           Icon: GreenIcon,       badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "orange"       as const, label: "Orange",          Icon: OrangeIcon,      badge: "Normal",     badgeColor: Colors.moss  },
+  { value: "watery"       as const, label: "Watery / Runny",  Icon: WateryRunnyIcon, badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "mucousy"      as const, label: "Mucousy",         Icon: MucousyIcon,     badge: "Monitor",    badgeColor: "#C9961A"    },
+  { value: "black_dark"   as const, label: "Black / Dark",    Icon: BlackDarkIcon,   badge: "Flag",       badgeColor: Colors.dusk  },
+  { value: "blood"        as const, label: "Blood / Red",     Icon: BloodRedIcon,    badge: "See doctor", badgeColor: "#C0392B"    },
+];
 
-type AmountValue  = (typeof AMOUNTS)[number]["value"];
-type PooTypeValue = (typeof POO_TYPES)[number]["value"];
+type AmountValue  = "little" | "medium" | "lot";
+type PooTypeValue = "seedy_yellow" | "tan_brown" | "green" | "orange" | "watery" | "mucousy" | "black_dark" | "blood";
 
 function DiaperModal({ onClose, onSave }: DiaperProps) {
   const [type,       setType]       = useState<"wet" | "dirty" | "both" | null>(null);
@@ -784,16 +809,16 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
       <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
         <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
           <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>Diaper change 🩲</Text>
+          <Text style={styles.sheetTitle}>Diaper change</Text>
 
           {/* ── Type selector ── */}
           <Text style={styles.noteLabel}>What kind?</Text>
           <View style={styles.optionRow}>
             {([
-              { label: "Wet 💧",   value: "wet"   },
-              { label: "Dirty 💩", value: "dirty" },
-              { label: "Both 🌊",  value: "both"  },
-            ] as const).map((o) => (
+              { label: "Wet",   value: "wet"   as const, Icon: WetIcon   },
+              { label: "Dirty", value: "dirty" as const, Icon: DirtyIcon },
+              { label: "Both",  value: "both"  as const, Icon: BothIcon  },
+            ]).map((o) => (
               <TouchableOpacity
                 key={o.value}
                 onPress={() => { setType(o.value); setWetAmt(null); setDirtyAmt(null); setPooType(null); }}
@@ -802,6 +827,7 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
                   type === o.value && { borderColor: Colors.moss, backgroundColor: Colors.mossPale },
                 ]}
               >
+                <o.Icon size={24} />
                 <Text style={[styles.optionText, type === o.value && { color: Colors.moss }]}>
                   {o.label}
                 </Text>
@@ -812,15 +838,15 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
           {/* ── Wet amount ── */}
           {showWet && (
             <View style={ds.section}>
-              <Text style={styles.noteLabel}>💧 Wet — how much?</Text>
+              <Text style={styles.noteLabel}>Wet — how much?</Text>
               <View style={ds.amtRow}>
-                {AMOUNTS.map((a) => (
+                {WET_AMOUNTS.map((a) => (
                   <TouchableOpacity
                     key={a.value}
                     style={[ds.amtBtn, wetAmt === a.value && ds.amtBtnActive]}
                     onPress={() => setWetAmt(a.value)}
                   >
-                    <Text style={ds.amtIcon}>{a.icon}</Text>
+                    <a.Icon size={24} />
                     <Text style={[ds.amtLabel, wetAmt === a.value && ds.amtLabelActive]}>
                       {a.label}
                     </Text>
@@ -833,15 +859,15 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
           {/* ── Dirty amount ── */}
           {showDirty && (
             <View style={ds.section}>
-              <Text style={styles.noteLabel}>💩 Dirty — how much?</Text>
+              <Text style={styles.noteLabel}>Dirty — how much?</Text>
               <View style={ds.amtRow}>
-                {AMOUNTS.map((a) => (
+                {DIRTY_AMOUNTS.map((a) => (
                   <TouchableOpacity
                     key={a.value}
                     style={[ds.amtBtn, dirtyAmt === a.value && ds.amtBtnActive]}
                     onPress={() => setDirtyAmt(a.value)}
                   >
-                    <Text style={ds.amtIcon}>{a.icon}</Text>
+                    <a.Icon size={24} />
                     <Text style={[ds.amtLabel, dirtyAmt === a.value && ds.amtLabelActive]}>
                       {a.label}
                     </Text>
@@ -863,7 +889,9 @@ function DiaperModal({ onClose, onSave }: DiaperProps) {
                     style={[ds.pooBtn, pooType === p.value && { borderColor: Colors.moss, backgroundColor: Colors.mossPale }]}
                     onPress={() => setPooType(p.value)}
                   >
-                    <Text style={ds.pooIcon}>{p.icon}</Text>
+                    <View style={ds.pooIconWrap}>
+                      <p.Icon size={28} />
+                    </View>
                     <Text style={[ds.pooLabel, pooType === p.value && { color: Colors.moss }]}>
                       {p.label}
                     </Text>
@@ -939,9 +967,9 @@ const ds = StyleSheet.create({
     borderColor: Colors.moss,
     backgroundColor: Colors.mossPale,
   },
-  amtIcon: {
-    fontSize: 20,
+  amtIconWrap: {
     marginBottom: 4,
+    alignItems: "center" as const,
   },
   amtLabel: {
     fontFamily: "DM-Sans",
@@ -969,9 +997,9 @@ const ds = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.cream,
   },
-  pooIcon: {
-    fontSize: 22,
+  pooIconWrap: {
     marginBottom: 4,
+    alignItems: "center" as const,
   },
   pooLabel: {
     fontFamily: "DM-Sans",
