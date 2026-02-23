@@ -1,0 +1,72 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF5F0"/>
+      <stop offset="100%" stop-color="#FFE8DC"/>
+    </linearGradient>
+    <linearGradient id="cake1" x1="14" y1="40" x2="74" y2="76" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDDCB5"/>
+      <stop offset="100%" stop-color="#F9B97A"/>
+    </linearGradient>
+    <linearGradient id="cake2" x1="14" y1="54" x2="74" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F9C8A0"/>
+      <stop offset="100%" stop-color="#F0A060"/>
+    </linearGradient>
+    <linearGradient id="frosting" x1="14" y1="38" x2="74" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFE8F5"/>
+    </linearGradient>
+    <linearGradient id="candle1" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FF9EC4"/>
+      <stop offset="100%" stop-color="#E0508A"/>
+    </linearGradient>
+    <linearGradient id="candle2" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#A8D8FF"/>
+      <stop offset="100%" stop-color="#5AAAE8"/>
+    </linearGradient>
+    <linearGradient id="candle3" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#B8F0C8"/>
+      <stop offset="100%" stop-color="#50C878"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+
+  <!-- Cake top tier -->
+  <rect x="24" y="42" width="40" height="20" rx="5" fill="url(#cake1)"/>
+  <!-- Cake bottom tier -->
+  <rect x="14" y="58" width="60" height="20" rx="6" fill="url(#cake2)"/>
+
+  <!-- Frosting drips on top tier -->
+  <path d="M24 42 Q28 38 32 42 Q36 38 40 42 Q44 38 48 42 Q52 38 56 42 Q60 38 64 42" stroke="url(#frosting)" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Frosting drips on bottom tier -->
+  <path d="M14 58 Q19 53 24 58 Q29 53 34 58 Q39 53 44 58 Q49 53 54 58 Q59 53 64 58 Q69 53 74 58" stroke="url(#frosting)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <!-- Sprinkles on bottom tier -->
+  <rect x="22" y="64" width="6" height="2.5" rx="1.2" fill="#FF9EC4" opacity="0.7" transform="rotate(-30 22 64)"/>
+  <rect x="34" y="70" width="6" height="2.5" rx="1.2" fill="#A8D8FF" opacity="0.7" transform="rotate(20 34 70)"/>
+  <rect x="46" y="63" width="6" height="2.5" rx="1.2" fill="#B8F0C8" opacity="0.7" transform="rotate(-15 46 63)"/>
+  <rect x="58" y="68" width="6" height="2.5" rx="1.2" fill="#FDDCB5" opacity="0.7" transform="rotate(35 58 68)"/>
+  <rect x="28" y="72" width="5" height="2" rx="1" fill="#FFD966" opacity="0.7" transform="rotate(10 28 72)"/>
+  <rect x="52" y="72" width="5" height="2" rx="1" fill="#FF9EC4" opacity="0.7" transform="rotate(-25 52 72)"/>
+
+  <!-- Candle 1 (pink) -->
+  <rect x="30" y="28" width="7" height="16" rx="3.5" fill="#FF9EC4"/>
+  <rect x="31" y="30" width="2" height="6" rx="1" fill="white" opacity="0.35"/>
+  <!-- Flame 1 -->
+  <ellipse cx="33.5" cy="26" rx="2.5" ry="3.5" fill="#FFD54F"/>
+  <ellipse cx="33.5" cy="27" rx="1.2" ry="2" fill="#FF8C00" opacity="0.7"/>
+
+  <!-- Candle 2 (blue) -->
+  <rect x="41" y="26" width="7" height="18" rx="3.5" fill="#A8D8FF"/>
+  <rect x="42" y="28" width="2" height="6" rx="1" fill="white" opacity="0.35"/>
+  <!-- Flame 2 -->
+  <ellipse cx="44.5" cy="24" rx="2.5" ry="3.5" fill="#FFD54F"/>
+  <ellipse cx="44.5" cy="25" rx="1.2" ry="2" fill="#FF8C00" opacity="0.7"/>
+
+  <!-- Candle 3 (green) -->
+  <rect x="52" y="29" width="7" height="15" rx="3.5" fill="#B8F0C8"/>
+  <rect x="53" y="31" width="2" height="6" rx="1" fill="white" opacity="0.35"/>
+  <!-- Flame 3 -->
+  <ellipse cx="55.5" cy="27" rx="2.5" ry="3.5" fill="#FFD54F"/>
+  <ellipse cx="55.5" cy="28" rx="1.2" ry="2" fill="#FF8C00" opacity="0.7"/>
+</svg>

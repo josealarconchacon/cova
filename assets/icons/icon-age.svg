@@ -1,0 +1,60 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0FFF4"/>
+      <stop offset="100%" stop-color="#DCFCE7"/>
+    </linearGradient>
+    <linearGradient id="soil" x1="14" y1="65" x2="74" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C8A06A"/>
+      <stop offset="100%" stop-color="#A07040"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="44" y1="30" x2="44" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6DD672"/>
+      <stop offset="100%" stop-color="#2E8B40"/>
+    </linearGradient>
+    <linearGradient id="leaf1" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#86E88A"/>
+      <stop offset="100%" stop-color="#2E9E50"/>
+    </linearGradient>
+    <linearGradient id="leaf2" x1="1" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#70D878"/>
+      <stop offset="100%" stop-color="#228840"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+
+  <!-- Soil pot / ground mound -->
+  <ellipse cx="44" cy="70" rx="26" ry="8" fill="url(#soil)"/>
+  <ellipse cx="44" cy="68" rx="26" ry="6" fill="#D4A870"/>
+  <!-- Soil texture dots -->
+  <circle cx="34" cy="68" r="1.5" fill="#B8904A" opacity="0.5"/>
+  <circle cx="44" cy="70" r="1.5" fill="#B8904A" opacity="0.5"/>
+  <circle cx="54" cy="67" r="1.5" fill="#B8904A" opacity="0.5"/>
+  <circle cx="40" cy="72" r="1" fill="#B8904A" opacity="0.4"/>
+  <circle cx="50" cy="71" r="1" fill="#B8904A" opacity="0.4"/>
+
+  <!-- Main stem -->
+  <path d="M44 68 C44 68 42 55 44 42 C44 40 44 36 44 32" stroke="url(#stem)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Left leaf (large) -->
+  <path d="M44 50 C44 50 30 46 24 36 C24 36 28 30 38 34 C42 36 44 42 44 50 Z" fill="url(#leaf1)"/>
+  <!-- Left leaf vein -->
+  <path d="M44 50 C40 44 32 38 26 36" stroke="#1A7A30" stroke-width="0.8" fill="none" opacity="0.5"/>
+
+  <!-- Right leaf (medium) -->
+  <path d="M44 42 C44 42 56 36 64 26 C64 26 60 20 50 24 C46 26 44 34 44 42 Z" fill="url(#leaf2)"/>
+  <!-- Right leaf vein -->
+  <path d="M44 42 C48 36 56 28 63 26" stroke="#1A7A30" stroke-width="0.8" fill="none" opacity="0.5"/>
+
+  <!-- Small new leaf at top -->
+  <path d="M44 32 C44 32 50 26 52 20 C52 20 46 18 44 24 C43 27 44 30 44 32 Z" fill="#A8E8B0"/>
+  <!-- Small leaf vein -->
+  <path d="M44 32 C46 28 50 22 52 20" stroke="#2E8B40" stroke-width="0.7" fill="none" opacity="0.5"/>
+
+  <!-- Tiny sprout tip -->
+  <ellipse cx="44" cy="20" rx="3" ry="5" fill="#C8F0C0" transform="rotate(-10 44 20)"/>
+
+  <!-- Small dew drops -->
+  <ellipse cx="30" cy="40" rx="2" ry="2.8" fill="#B8E8FF" opacity="0.7" transform="rotate(15 30 40)"/>
+  <ellipse cx="58" cy="32" rx="1.5" ry="2.2" fill="#B8E8FF" opacity="0.6" transform="rotate(-10 58 32)"/>
+</svg>

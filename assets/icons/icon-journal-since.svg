@@ -1,0 +1,62 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F5F8FF"/>
+      <stop offset="100%" stop-color="#EAF0FF"/>
+    </linearGradient>
+    <linearGradient id="cover" x1="10" y1="20" x2="78" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7B9ED9"/>
+      <stop offset="100%" stop-color="#4A6FAD"/>
+    </linearGradient>
+    <linearGradient id="page" x1="14" y1="24" x2="74" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDFEFF"/>
+      <stop offset="100%" stop-color="#F0F5FF"/>
+    </linearGradient>
+    <linearGradient id="spine" x1="42" y1="20" x2="46" y2="74" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3A5A9A"/>
+      <stop offset="100%" stop-color="#2A4070"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+
+  <!-- Book shadow -->
+  <ellipse cx="44" cy="74" rx="30" ry="4" fill="rgba(74,111,173,0.15)"/>
+
+  <!-- Left page / cover -->
+  <path d="M14 24 C14 22 16 20 18 20 L44 20 L44 70 L18 70 C16 70 14 68 14 66 Z" fill="url(#cover)"/>
+  <!-- Right page / cover -->
+  <path d="M74 24 C74 22 72 20 70 20 L44 20 L44 70 L70 70 C72 70 74 68 74 66 Z" fill="url(#cover)"/>
+
+  <!-- Left page paper -->
+  <path d="M16 26 C16 24 18 22 20 22 L44 22 L44 68 L20 68 C18 68 16 66 16 64 Z" fill="url(#page)"/>
+  <!-- Right page paper -->
+  <path d="M72 26 C72 24 70 22 68 22 L44 22 L44 68 L68 68 C70 68 72 66 72 64 Z" fill="url(#page)"/>
+
+  <!-- Spine -->
+  <rect x="42" y="20" width="4" height="50" fill="url(#spine)"/>
+  <!-- Spine shine -->
+  <rect x="42.5" y="20" width="1" height="50" fill="white" opacity="0.2"/>
+
+  <!-- Left page lines -->
+  <line x1="22" y1="32" x2="40" y2="32" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="22" y1="38" x2="40" y2="38" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="22" y1="44" x2="40" y2="44" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="22" y1="50" x2="40" y2="50" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="22" y1="56" x2="36" y2="56" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Right page lines -->
+  <line x1="48" y1="32" x2="66" y2="32" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="48" y1="38" x2="66" y2="38" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="48" y1="44" x2="66" y2="44" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="48" y1="50" x2="66" y2="50" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="48" y1="56" x2="60" y2="56" stroke="#B8C8E8" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Bookmark ribbon (right side) -->
+  <path d="M64 20 L64 38 L60 34 L56 38 L56 20 Z" fill="#FF8FA3" opacity="0.9"/>
+
+  <!-- Page curl bottom right -->
+  <path d="M68 68 Q74 64 72 58" stroke="#B8C8E8" stroke-width="1" fill="none" opacity="0.6"/>
+
+  <!-- Small star on left page -->
+  <path d="M30 26 L31 28.4 L33.4 28.4 L31.6 29.8 L32.4 32.2 L30 30.8 L27.6 32.2 L28.4 29.8 L26.6 28.4 L29 28.4 Z" fill="#FFD54F" opacity="0.7"/>
+</svg>
