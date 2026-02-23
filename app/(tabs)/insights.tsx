@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useState } from "react";
 import {
   View,
@@ -12,7 +12,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
-import { useWeeklyStats, type DailyStats } from "../../lib/useWeeklyStats";
+import {
+  useWeeklyStats,
+  hourRangeLabel,
+  type DailyStats,
+  type WeeklyStats,
+} from "../../lib/useWeeklyStats";
 import type { Log } from "../../types";
 import {
   FeedIcon,
@@ -20,7 +25,7 @@ import {
   DiaperIcon,
 } from "../../assets/icons/QuickActionIcons";
 
-const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 type Tab = "feeds" | "sleep" | "diapers";
 
@@ -30,72 +35,164 @@ const TABS = [
   { id: "diapers" as Tab, Icon: DiaperIcon, label: "Diapers", color: Colors.moss },
 ];
 
-const INSIGHTS: Record<
-  Tab,
-  Array<{ icon: string; text: string; color: string }>
-> = {
-  feeds: [
-    {
+interface InsightCard {
+  icon: string;
+  title: string;
+  text: string;
+  color: string;
+}
+
+function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
+  const cards: InsightCard[] = [];
+  const { feedInsights } = stats;
+
+  if (feedInsights.peakHour != null) {
+    cards.push({
       icon: "📈",
-      text: "Luna feeds most between 7–9 AM. Morning feeds average 25% longer.",
+      title: "Peak feeding time",
+      text: `Most feeds happen around ${hourRangeLabel(feedInsights.peakHour)}.`,
       color: Colors.dusk,
-    },
-    {
+    });
+  }
+
+  if (feedInsights.nightFeedCount > 0) {
+    cards.push({
       icon: "🌙",
-      text: "Night feeds reduced this week — 1 fewer than last week!",
+      title: "Night feeds",
+      text: `${feedInsights.nightFeedCount} night feed${feedInsights.nightFeedCount === 1 ? "" : "s"} this week (10 PM – 6 AM).`,
       color: Colors.sky,
-    },
-    {
+    });
+  } else if (stats.totalFeeds > 0) {
+    cards.push({
+      icon: "🌙",
+      title: "No night feeds",
+      text: "No feeds recorded between 10 PM and 6 AM this week.",
+      color: Colors.sky,
+    });
+  }
+
+  if (feedInsights.avgDurationMin > 0) {
+    cards.push({
       icon: "⏱️",
-      text: "Average feeding duration: 19 min. Consistent with healthy intake.",
+      title: "Average duration",
+      text: `Average feeding session: ${feedInsights.avgDurationMin} min.`,
       color: Colors.moss,
-    },
-  ],
-  sleep: [
-    {
+    });
+  }
+
+  if (cards.length === 0) {
+    cards.push({
+      icon: "📝",
+      title: "No feed data yet",
+      text: "Start logging feeds to see patterns here.",
+      color: Colors.inkLight,
+    });
+  }
+
+  return cards;
+}
+
+function buildSleepInsights(stats: WeeklyStats): InsightCard[] {
+  const cards: InsightCard[] = [];
+  const { sleepInsights } = stats;
+
+  if (sleepInsights.bestDay) {
+    cards.push({
       icon: "🌟",
-      text: "Best sleep day was Wednesday with 15.5h total.",
+      title: "Best sleep day",
+      text: `${sleepInsights.bestDay.dayName} had the most sleep at ${sleepInsights.bestDay.hours}h total.`,
       color: Colors.sky,
-    },
-    {
+    });
+  }
+
+  if (sleepInsights.avgNapsPerDay > 0) {
+    const longestH = Math.floor(sleepInsights.longestNapMin / 60);
+    const longestM = sleepInsights.longestNapMin % 60;
+    const longestStr =
+      longestH > 0 ? `${longestH}h ${longestM}m` : `${longestM} min`;
+    cards.push({
       icon: "📊",
-      text: "Average 3 naps per day. Longest nap: 2h 18m.",
+      title: "Nap rhythm",
+      text: `Averaging ${sleepInsights.avgNapsPerDay} nap${sleepInsights.avgNapsPerDay === 1 ? "" : "s"}/day. Longest: ${longestStr}.`,
       color: Colors.teal,
-    },
-    {
+    });
+  }
+
+  if (stats.avgSleepHours > 0) {
+    cards.push({
       icon: "😴",
-      text: "Nighttime sleep settling into a 10 PM–5 AM pattern.",
+      title: "Daily average",
+      text: `Averaging ${stats.avgSleepHours}h of sleep per day this week.`,
       color: Colors.lav,
-    },
-  ],
-  diapers: [
-    {
-      icon: "📉",
-      text: "Changes down 12% vs last week — normal as feeding stabilises.",
-      color: Colors.moss,
-    },
-    {
-      icon: "🕐",
-      text: "Most changes happen between 6–8 AM and 6–8 PM.",
-      color: Colors.dusk,
-    },
-    {
+    });
+  }
+
+  if (cards.length === 0) {
+    cards.push({
+      icon: "📝",
+      title: "No sleep data yet",
+      text: "Start logging sleep to see patterns here.",
+      color: Colors.inkLight,
+    });
+  }
+
+  return cards;
+}
+
+function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
+  const cards: InsightCard[] = [];
+  const { diaperInsights } = stats;
+
+  if (stats.totalDiapers > 0 && (diaperInsights.wetPct > 0 || diaperInsights.dirtyPct > 0)) {
+    cards.push({
       icon: "✅",
-      text: "Healthy ratio: 70% wet, 30% dirty.",
+      title: "Wet / dirty ratio",
+      text: `${diaperInsights.wetPct}% wet, ${diaperInsights.dirtyPct}% dirty this week.`,
       color: Colors.teal,
-    },
-  ],
-};
+    });
+  }
+
+  if (diaperInsights.peakHour != null) {
+    cards.push({
+      icon: "🕐",
+      title: "Peak change time",
+      text: `Most changes happen around ${hourRangeLabel(diaperInsights.peakHour)}.`,
+      color: Colors.dusk,
+    });
+  }
+
+  if (stats.avgDiapers > 0) {
+    cards.push({
+      icon: "📊",
+      title: "Daily average",
+      text: `Averaging ${stats.avgDiapers} diaper change${stats.avgDiapers === 1 ? "" : "s"} per day.`,
+      color: Colors.moss,
+    });
+  }
+
+  if (cards.length === 0) {
+    cards.push({
+      icon: "📝",
+      title: "No diaper data yet",
+      text: "Start logging diapers to see patterns here.",
+      color: Colors.inkLight,
+    });
+  }
+
+  return cards;
+}
 
 export default function InsightsScreen() {
   const { activeBaby } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>("feeds");
 
-  // Last 7 days
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const { data: logs = [] } = useQuery({
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  const { data: allLogs = [] } = useQuery({
     queryKey: ["insights-logs", activeBaby?.id],
     enabled: !!activeBaby,
     queryFn: async () => {
@@ -103,14 +200,18 @@ export default function InsightsScreen() {
         .from("logs")
         .select("*")
         .eq("baby_id", activeBaby!.id)
-        .gte("started_at", sevenDaysAgo.toISOString())
+        .gte("started_at", fourteenDaysAgo.toISOString())
         .order("started_at", { ascending: true });
       if (error) throw error;
       return data as Log[];
     },
   });
 
-  const stats = useWeeklyStats(logs);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+  const currentWeekLogs = allLogs.filter((l) => l.started_at >= sevenDaysAgoISO);
+  const previousWeekLogs = allLogs.filter((l) => l.started_at < sevenDaysAgoISO);
+
+  const stats = useWeeklyStats(currentWeekLogs, previousWeekLogs);
 
   const activeConfig = TABS.find((t) => t.id === activeTab)!;
   const typeMap: Record<Tab, keyof (typeof stats.days)[0]> = {
@@ -121,13 +222,33 @@ export default function InsightsScreen() {
   const chartData = stats.days.map(
     (d: DailyStats) => d[typeMap[activeTab]] as number,
   );
-  const maxVal = Math.max(...chartData, 1) * 1.2;
+  const maxVal = Math.max(...chartData, 1) * 1.25;
   const avg =
     activeTab === "feeds"
       ? stats.avgFeeds
       : activeTab === "sleep"
         ? stats.avgSleepHours
         : stats.avgDiapers;
+
+  const total =
+    activeTab === "feeds"
+      ? stats.totalFeeds
+      : activeTab === "sleep"
+        ? stats.totalSleepHours
+        : stats.totalDiapers;
+
+  const wowChange =
+    activeTab === "feeds"
+      ? stats.weekOverWeek.feedsPctChange
+      : activeTab === "sleep"
+        ? stats.weekOverWeek.sleepPctChange
+        : stats.weekOverWeek.diapersPctChange;
+
+  const insights = useMemo((): Record<Tab, InsightCard[]> => ({
+    feeds: buildFeedInsights(stats),
+    sleep: buildSleepInsights(stats),
+    diapers: buildDiaperInsights(stats),
+  }), [stats]);
 
   const weekRange = () => {
     const start = new Date(sevenDaysAgo);
@@ -144,144 +265,201 @@ export default function InsightsScreen() {
     );
   }
 
+  const wowLabel =
+    wowChange == null
+      ? "—"
+      : `${wowChange > 0 ? "+" : ""}${wowChange}`;
+
+  const statItems = [
+    {
+      label: "Daily Avg",
+      value: avg.toFixed(1),
+      suffix: activeTab === "sleep" ? "h" : "",
+    },
+    {
+      label: "This Week",
+      value:
+        activeTab === "sleep"
+          ? stats.totalSleepHours.toFixed(1)
+          : total.toString(),
+      suffix: activeTab === "sleep" ? "h" : "",
+    },
+    {
+      label: "vs Last Week",
+      value: wowLabel,
+      suffix: wowChange != null ? "%" : "",
+    },
+  ];
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <Text style={styles.eyebrow}>This week</Text>
-      <Text style={styles.title}>Weekly{"\n"}Insights</Text>
-      <Text style={styles.subtitle}>
-        {weekRange()} · {activeBaby.name}
-      </Text>
-
-      {/* Tab pills */}
-      <View style={styles.tabRow}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            style={[
-              styles.tab,
-              activeTab === t.id && {
-                backgroundColor: t.color,
-                shadowColor: t.color,
-                shadowOpacity: 0.4,
-                shadowOffset: { width: 0, height: 4 },
-                shadowRadius: 10,
-                elevation: 6,
-              },
-            ]}
-            onPress={() => setActiveTab(t.id)}
-            activeOpacity={0.85}
-          >
-            <t.Icon size={18} color={activeTab === t.id ? "white" : t.color} />
-            <Text
-              style={[styles.tabText, activeTab === t.id && { color: "white" }]}
-            >
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── Bar chart ── */}
-      <View style={styles.chartCard}>
-        <View style={styles.barsRow}>
-          {chartData.map((val: number, i: number) => {
-            const pct = (val / maxVal) * 100;
-            const isToday = i === 6;
-            return (
-              <View key={i} style={styles.barWrap}>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.bar,
-                      {
-                        height: `${Math.max(pct, 3)}%`,
-                        backgroundColor: isToday
-                          ? activeConfig.color
-                          : activeConfig.color + "55",
-                      },
-                    ]}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.dayLabel,
-                    isToday && { color: activeConfig.color, fontWeight: "700" },
-                  ]}
-                >
-                  {WEEK_DAYS[i]}
-                </Text>
-              </View>
-            );
-          })}
+      {/* ── Header ── */}
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Weekly Insights</Text>
+          <Text style={styles.subtitle}>
+            {weekRange()} · {activeBaby.name}
+          </Text>
         </View>
       </View>
 
-      {/* ── Stat cards ── */}
-      <View style={styles.statRow}>
-        {[
-          {
-            label: "Daily avg",
-            value: avg.toFixed(1),
-            unit: activeTab === "sleep" ? "hrs" : "×",
-          },
-          {
-            label: "This week",
-            value:
-              activeTab === "sleep"
-                ? stats.totalSleepHours.toFixed(1) + "h"
-                : (activeTab === "feeds"
-                    ? stats.totalFeeds
-                    : stats.totalDiapers
-                  ).toString(),
-            unit: "total",
-          },
-          { label: "vs last wk", value: "+8%", unit: "↑ more" },
-        ].map((s) => (
-          <View
-            key={s.label}
-            style={[
-              styles.statCard,
-              {
-                backgroundColor: activeConfig.color + "18",
-                borderColor: activeConfig.color + "22",
-              },
-            ]}
-          >
-            <Text style={[styles.statValue, { color: activeConfig.color }]}>
-              {s.value}
-            </Text>
-            <Text style={styles.statLabel}>{s.label}</Text>
-            <Text style={[styles.statUnit, { color: activeConfig.color }]}>
-              {s.unit}
-            </Text>
+      {/* ── Tab pills ── */}
+      <View style={styles.tabRow}>
+        {TABS.map((t) => {
+          const active = activeTab === t.id;
+          return (
+            <TouchableOpacity
+              key={t.id}
+              style={[
+                styles.tab,
+                active && {
+                  backgroundColor: t.color,
+                  shadowColor: t.color,
+                  shadowOpacity: 0.3,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowRadius: 8,
+                  elevation: 5,
+                },
+              ]}
+              onPress={() => setActiveTab(t.id)}
+              activeOpacity={0.8}
+            >
+              <t.Icon size={16} color={active ? "#fff" : t.color} />
+              <Text
+                style={[
+                  styles.tabText,
+                  active && { color: "#fff" },
+                ]}
+              >
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* ── Stat strip + chart ── */}
+      <View style={styles.chartCard}>
+        <View style={styles.statStrip}>
+          {statItems.map((s, i) => (
+            <React.Fragment key={s.label}>
+              <View style={styles.statItem}>
+                <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+                  <Text style={[styles.statValue, { color: activeConfig.color }]}>
+                    {s.value}
+                  </Text>
+                  <Text style={[styles.statSuffix, { color: activeConfig.color }]}>
+                    {s.suffix}
+                  </Text>
+                </View>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+              {i < statItems.length - 1 && (
+                <View style={styles.statDivider} />
+              )}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* ── Bar chart ── */}
+        <View style={styles.chartArea}>
+          {[0.25, 0.5, 0.75].map((frac) => (
+            <View
+              key={frac}
+              style={[
+                styles.gridLine,
+                { bottom: `${frac * 100}%` },
+              ]}
+            />
+          ))}
+          <View style={styles.barsRow}>
+            {chartData.map((val: number, i: number) => {
+              const pct = (val / maxVal) * 100;
+              const isToday = i === 6;
+              return (
+                <View key={i} style={styles.barWrap}>
+                  <View style={styles.barTrack}>
+                    {val > 0 && (
+                      <Text
+                        style={[
+                          styles.barValue,
+                          { color: isToday ? activeConfig.color : Colors.inkLight },
+                        ]}
+                      >
+                        {activeTab === "sleep" ? val.toFixed(1) : val}
+                      </Text>
+                    )}
+                    <View
+                      style={[
+                        styles.bar,
+                        {
+                          height: `${Math.max(pct, 4)}%`,
+                          backgroundColor: isToday
+                            ? activeConfig.color
+                            : activeConfig.color + "40",
+                          borderRadius: 8,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.dayLabel,
+                      isToday && {
+                        color: activeConfig.color,
+                        fontWeight: "700",
+                      },
+                    ]}
+                  >
+                    {WEEK_DAYS[i]}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
-        ))}
+        </View>
       </View>
 
       {/* ── Patterns ── */}
-      <Text style={styles.sectionLabel}>Patterns this week</Text>
-      {INSIGHTS[activeTab].map((item) => (
+      <Text style={styles.sectionLabel}>Patterns</Text>
+      {insights[activeTab].map((item) => (
         <View
-          key={item.text}
-          style={[styles.insightCard, { borderColor: item.color + "22" }]}
+          key={item.title}
+          style={[
+            styles.insightCard,
+            { borderLeftColor: item.color },
+          ]}
         >
-          <View
-            style={[styles.insightIcon, { backgroundColor: item.color + "18" }]}
-          >
-            <Text style={{ fontSize: 18 }}>{item.icon}</Text>
+          <View style={styles.insightHeader}>
+            <View
+              style={[
+                styles.insightIcon,
+                { backgroundColor: item.color + "15" },
+              ]}
+            >
+              <Text style={{ fontSize: 16 }}>{item.icon}</Text>
+            </View>
+            <Text style={styles.insightTitle}>{item.title}</Text>
           </View>
           <Text style={styles.insightText}>{item.text}</Text>
         </View>
       ))}
 
       {/* ── Export ── */}
-      <TouchableOpacity style={styles.exportBtn}>
-        <Text style={styles.exportBtnText}>📤 Export this week's report</Text>
+      <TouchableOpacity
+        style={[
+          styles.exportBtn,
+          { backgroundColor: activeConfig.color + "12" },
+        ]}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.exportBtnText, { color: activeConfig.color }]}>
+          Export weekly report
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -289,92 +467,140 @@ export default function InsightsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
-  content: { padding: 24, paddingTop: 60, paddingBottom: 100 },
-  eyebrow: {
-    fontFamily: "DM-Sans",
-    fontSize: 11,
-    letterSpacing: 2.5,
-    textTransform: "uppercase",
-    color: Colors.teal,
-    marginBottom: 4,
+  content: { padding: 20, paddingTop: 60, paddingBottom: 100 },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginBottom: 24,
   },
   title: {
     fontFamily: "Cormorant-Garamond",
-    fontSize: 38,
+    fontSize: 32,
     fontWeight: "600",
     color: Colors.ink,
-    letterSpacing: -0.5,
-    lineHeight: 40,
-    marginBottom: 4,
+    letterSpacing: -0.3,
+    lineHeight: 36,
   },
   subtitle: {
     fontFamily: "DM-Sans",
     fontSize: 13,
     color: Colors.inkLight,
-    marginBottom: 28,
+    marginTop: 4,
   },
+
   tabRow: {
     flexDirection: "row",
-    gap: 8,
-    marginBottom: 24,
+    gap: 6,
+    marginBottom: 20,
     backgroundColor: Colors.sand,
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 4,
   },
-  tab: { flex: 1, borderRadius: 16, paddingVertical: 10, alignItems: "center" },
-  tabIcon: { fontSize: 16, marginBottom: 2 },
+  tab: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+  },
   tabText: {
     fontFamily: "DM-Sans",
-    fontWeight: "700",
-    fontSize: 12,
+    fontWeight: "600",
+    fontSize: 13,
     color: Colors.inkLight,
   },
+
   chartCard: {
     backgroundColor: Colors.sand,
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 24,
   },
-  barsRow: {
+  statStrip: {
     flexDirection: "row",
-    gap: 6,
-    alignItems: "flex-end",
-    height: 160,
-    marginBottom: 8,
-  },
-  barWrap: { flex: 1, alignItems: "center", gap: 6 },
-  barTrack: { flex: 1, width: "100%", justifyContent: "flex-end" },
-  bar: { width: "100%", borderRadius: 6, minHeight: 4 },
-  dayLabel: { fontFamily: "DM-Sans", fontSize: 10, color: Colors.inkLight },
-  statRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-  statCard: {
-    flex: 1,
-    borderRadius: 18,
-    padding: 14,
     alignItems: "center",
-    borderWidth: 1,
+    marginBottom: 18,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
   },
   statValue: {
     fontFamily: "Cormorant-Garamond",
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: "700",
+    lineHeight: 30,
+  },
+  statSuffix: {
+    fontFamily: "DM-Sans",
+    fontSize: 13,
     fontWeight: "600",
-    lineHeight: 26,
+    marginLeft: 1,
   },
   statLabel: {
     fontFamily: "DM-Sans",
-    fontSize: 9,
+    fontSize: 10,
     color: Colors.inkLight,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
   },
-  statUnit: {
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: Colors.sandDark,
+  },
+
+  chartArea: {
+    position: "relative",
+    height: 170,
+  },
+  gridLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: Colors.sandDark + "80",
+  },
+  barsRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-end",
+    flex: 1,
+  },
+  barWrap: {
+    flex: 1,
+    alignItems: "center",
+    height: "100%",
+  },
+  barTrack: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  bar: {
+    width: "70%",
+    minHeight: 4,
+  },
+  barValue: {
     fontFamily: "DM-Sans",
-    fontSize: 9,
-    fontStyle: "italic",
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 4,
   },
+  dayLabel: {
+    fontFamily: "DM-Sans",
+    fontSize: 11,
+    color: Colors.inkLight,
+    marginTop: 8,
+    fontWeight: "500",
+  },
+
   sectionLabel: {
     fontFamily: "DM-Sans",
     fontSize: 11,
@@ -385,42 +611,50 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   insightCard: {
-    flexDirection: "row",
-    gap: 12,
     padding: 14,
     backgroundColor: Colors.cream,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: Colors.sandDark + "60",
+    borderLeftWidth: 3,
     marginBottom: 10,
-    alignItems: "flex-start",
+  },
+  insightHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 6,
   },
   insightIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  insightTitle: {
+    fontFamily: "DM-Sans",
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.ink,
   },
   insightText: {
     fontFamily: "DM-Sans",
     fontSize: 13,
     color: Colors.inkMid,
-    flex: 1,
     lineHeight: 19,
+    paddingLeft: 42,
   },
   exportBtn: {
-    borderWidth: 1.5,
-    borderColor: Colors.sandDark,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     alignItems: "center",
-    marginTop: 12,
+    marginTop: 8,
   },
   exportBtnText: {
     fontFamily: "DM-Sans",
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 14,
-    color: Colors.inkMid,
   },
 });
