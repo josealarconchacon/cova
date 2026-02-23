@@ -215,13 +215,27 @@ export default function BabyScreen() {
     if (!activeBaby?.date_of_birth) return "";
     const dob = new Date(activeBaby.date_of_birth);
     const now = new Date();
+    const totalDays = Math.floor(
+      (now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (totalDays < 7) {
+      return `${totalDays} ${totalDays === 1 ? "day" : "days"} old`;
+    }
+
     const months =
       (now.getFullYear() - dob.getFullYear()) * 12 +
       (now.getMonth() - dob.getMonth());
     const weeks = Math.floor(
       ((now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 7)) % 4.33,
     );
-    return `${months} months · ${weeks} weeks old`;
+
+    const mLabel = months === 1 ? "month" : "months";
+    const wLabel = weeks === 1 ? "week" : "weeks";
+
+    if (months === 0) return `${weeks} ${wLabel} old`;
+    if (weeks === 0) return `${months} ${mLabel} old`;
+    return `${months} ${mLabel} · ${weeks} ${wLabel} old`;
   };
 
   if (!activeBaby) {
@@ -240,30 +254,38 @@ export default function BabyScreen() {
     >
       {/* ── Hero ── */}
       <View style={styles.hero}>
-        <View style={styles.avatarWrap}>
-          {activeBaby.photo_url ? (
-            <Image
-              key={activeBaby.photo_url}
-              source={{ uri: activeBaby.photo_url, cache: "reload" }}
-              style={styles.avatarImg}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={{ fontSize: 44 }}>🌙</Text>
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.heroName}>{activeBaby.name}</Text>
-        <Text style={styles.heroAge}>{calcAge()}</Text>
-
-        <View style={styles.heroBtnRow}>
+        <View style={styles.heroInner}>
+          {/* Avatar with edit badge */}
           <TouchableOpacity
-            style={styles.heroBtnGhost}
+            style={styles.avatarWrap}
             onPress={openEditProfile}
+            activeOpacity={0.85}
           >
-            <Text style={styles.heroBtnText}>Edit profile</Text>
+            <View style={styles.avatarRing}>
+              {activeBaby.photo_url ? (
+                <Image
+                  key={activeBaby.photo_url}
+                  source={{ uri: activeBaby.photo_url, cache: "reload" }}
+                  style={styles.avatarImg}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={{ fontSize: 36 }}>🌙</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.editBadge}>
+              <Text style={{ fontSize: 11 }}>✏️</Text>
+            </View>
           </TouchableOpacity>
+
+          {/* Name + age */}
+          <View style={styles.heroText}>
+            <Text style={styles.heroName} numberOfLines={1}>
+              {activeBaby.name}
+            </Text>
+            <Text style={styles.heroAge}>{calcAge()}</Text>
+          </View>
         </View>
       </View>
 
@@ -555,60 +577,70 @@ const styles = StyleSheet.create({
   // ── Hero
   hero: {
     backgroundColor: Colors.teal,
-    padding: 48,
-    paddingTop: 60,
+    paddingTop: 64,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  heroInner: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 18,
   },
   avatarWrap: {
     position: "relative",
-    marginBottom: 16,
+  },
+  avatarRing: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.35)",
+    overflow: "hidden",
   },
   avatarImg: {
-    width: 96,
-    height: 96,
-    borderRadius: 32,
+    width: "100%",
+    height: "100%",
   },
   avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  heroText: {
+    flex: 1,
   },
   heroName: {
     fontFamily: "Cormorant-Garamond",
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: "600",
     color: "white",
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   heroAge: {
     fontFamily: "DM-Sans",
     fontSize: 13,
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: 16,
-  },
-  heroBtnRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  heroBtnGhost: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-  },
-  heroBtnText: {
-    fontFamily: "DM-Sans",
-    fontWeight: "700",
-    fontSize: 13,
-    color: "white",
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
   },
   // ── Info grid
   grid: {

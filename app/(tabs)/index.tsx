@@ -356,6 +356,14 @@ export default function HomeScreen() {
     if (!activeBaby?.date_of_birth) return "";
     const dob = new Date(activeBaby.date_of_birth);
     const now = new Date();
+    const totalDays = Math.floor(
+      (now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (totalDays < 7) {
+      return `${totalDays} ${totalDays === 1 ? "day" : "days"} old`;
+    }
+
     const months = Math.floor(
       (now.getFullYear() - dob.getFullYear()) * 12 +
         (now.getMonth() - dob.getMonth()),
@@ -363,7 +371,13 @@ export default function HomeScreen() {
     const weeks = Math.floor(
       ((now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 7)) % 4,
     );
-    return `${months} months · ${weeks} weeks old`;
+
+    const mLabel = months === 1 ? "month" : "months";
+    const wLabel = weeks === 1 ? "week" : "weeks";
+
+    if (months === 0) return `${weeks} ${wLabel} old`;
+    if (weeks === 0) return `${months} ${mLabel} old`;
+    return `${months} ${mLabel} · ${weeks} ${wLabel} old`;
   };
 
   if (!activeBaby) {
