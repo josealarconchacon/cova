@@ -20,6 +20,10 @@ import {
   DiaperIcon,
   MomentIcon,
   HealthIcon,
+  BreastMilkIcon,
+  BottleIcon,
+  FormulaIcon,
+  OtherLiquidIcon,
 } from "../../assets/icons/QuickActionIcons";
 
 const ACTION_ICON_SIZE = 30;
@@ -361,9 +365,9 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
   };
 
   const MILK_OPTIONS = [
-    { id: "breast_milk" as const, icon: "🤱", label: "Breast\nMilk" },
-    { id: "formula"    as const, icon: "🥛", label: "Formula"     },
-    { id: "other"      as const, icon: "💧", label: "Other"       },
+    { id: "breast_milk" as const, Icon: BreastMilkIcon, label: "Breast\nMilk", color: Colors.dusk },
+    { id: "formula"    as const, Icon: FormulaIcon,     label: "Formula",      color: "#3A9ED8"   },
+    { id: "other"      as const, Icon: OtherLiquidIcon, label: "Other",        color: "#7B1FA2"   },
   ];
 
   return (
@@ -382,21 +386,31 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
             onPress={() => {}}
           >
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>Feed 🍼</Text>
+            <Text style={styles.sheetTitle}>Feed</Text>
 
             {/* ── Tab selector ── */}
             <View style={fs.tabRow}>
-              {(["nursing", "bottle"] as const).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[fs.tab, tab === t && fs.tabActive]}
-                  onPress={() => setTab(t)}
-                >
-                  <Text style={[fs.tabText, tab === t && fs.tabTextActive]}>
-                    {t === "nursing" ? "🤱 Nursing" : "🍼 Bottle"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {(["nursing", "bottle"] as const).map((t) => {
+                const isActive = tab === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[fs.tab, isActive && fs.tabActive]}
+                    onPress={() => setTab(t)}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      {t === "nursing" ? (
+                        <BreastMilkIcon size={20} color={isActive ? Colors.dusk : Colors.inkLight} />
+                      ) : (
+                        <BottleIcon size={20} color={isActive ? Colors.dusk : Colors.inkLight} />
+                      )}
+                      <Text style={[fs.tabText, isActive && fs.tabTextActive]}>
+                        {t === "nursing" ? "Nursing" : "Bottle"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* ── Nursing pane ── */}
@@ -439,13 +453,15 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
                       ]}
                       onPress={() => setMilkType(o.id)}
                     >
-                      <Text style={{ fontSize: 22, marginBottom: 4 }}>
-                        {o.icon}
-                      </Text>
+                      <o.Icon
+                        size={26}
+                        color={milkType === o.id ? Colors.dusk : o.color}
+                      />
                       <Text
                         style={[
                           fs.milkLabel,
                           milkType === o.id && fs.milkLabelActive,
+                          { marginTop: 4 },
                         ]}
                       >
                         {o.label}

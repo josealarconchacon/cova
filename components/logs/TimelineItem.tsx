@@ -17,6 +17,7 @@ import {
   DiaperIcon,
   MomentIcon,
   HealthIcon,
+  BreastMilkIcon,
 } from "../../assets/icons/QuickActionIcons";
 
 const ACTION_WIDTH = 140;
@@ -306,7 +307,7 @@ export function TimelineItem({
               {log.type === "diaper" && diaperEmoji ? (
                 <Text style={{ fontSize: 18 }}>{diaperEmoji}</Text>
               ) : feedType === "nursing" ? (
-                <Text style={{ fontSize: 18 }}>🤱</Text>
+                <BreastMilkIcon size={22} color={cfg.color} />
               ) : (
                 <cfg.Icon size={22} color={cfg.color} />
               )}

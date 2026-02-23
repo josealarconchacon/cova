@@ -1,0 +1,67 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0F8FF"/>
+      <stop offset="100%" stop-color="#DCEEFF"/>
+    </linearGradient>
+    <linearGradient id="can" x1="16" y1="24" x2="72" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFF8E8"/>
+      <stop offset="100%" stop-color="#F5DFA0"/>
+    </linearGradient>
+    <linearGradient id="label" x1="16" y1="36" x2="72" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7BC8F0"/>
+      <stop offset="100%" stop-color="#3A9ED8"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="16" y1="20" x2="72" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8F8FF"/>
+      <stop offset="100%" stop-color="#B0DFF8"/>
+    </linearGradient>
+    <linearGradient id="scoop" x1="48" y1="14" x2="72" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#D8EEF8"/>
+    </linearGradient>
+  </defs>
+  <rect width="88" height="88" rx="20" fill="url(#bg)"/>
+
+  <!-- Can body -->
+  <rect x="18" y="30" width="48" height="46" rx="8" fill="url(#can)"/>
+  <!-- Can body side sheen -->
+  <rect x="20" y="32" width="8" height="42" rx="4" fill="white" opacity="0.2"/>
+
+  <!-- Label band -->
+  <rect x="18" y="40" width="48" height="26" rx="0" fill="url(#label)"/>
+  <rect x="18" y="40" width="48" height="2" fill="white" opacity="0.3"/>
+  <rect x="18" y="64" width="48" height="2" fill="white" opacity="0.3"/>
+
+  <!-- Label text / logo area -->
+  <ellipse cx="42" cy="53" rx="14" ry="10" fill="white" opacity="0.15"/>
+  <!-- Baby face icon on label -->
+  <circle cx="42" cy="51" r="7" fill="white" opacity="0.25"/>
+  <path d="M38 51 Q42 55 46 51" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="39.5" cy="49" r="1" fill="white" opacity="0.8"/>
+  <circle cx="44.5" cy="49" r="1" fill="white" opacity="0.8"/>
+  <!-- Stars on label -->
+  <path d="M24 50 L24.5 51.5 L26 52 L24.5 52.5 L24 54 L23.5 52.5 L22 52 L23.5 51.5 Z" fill="white" opacity="0.6"/>
+  <path d="M58 50 L58.5 51.5 L60 52 L58.5 52.5 L58 54 L57.5 52.5 L56 52 L57.5 51.5 Z" fill="white" opacity="0.6"/>
+
+  <!-- Can lid -->
+  <rect x="16" y="24" width="52" height="10" rx="5" fill="url(#lid)" stroke="#90CCEE" stroke-width="1"/>
+  <ellipse cx="42" cy="24" rx="26" ry="4" fill="#D0ECFA"/>
+  <!-- Lid ring -->
+  <ellipse cx="42" cy="34" rx="26" ry="3" fill="#C8E8F8" opacity="0.6"/>
+
+  <!-- Scoop handle sticking out -->
+  <path d="M56 28 C60 20 68 16 70 20 C72 24 66 28 62 30" stroke="url(#scoop)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Scoop bowl -->
+  <ellipse cx="58" cy="30" rx="7" ry="5" fill="url(#scoop)" stroke="#B0DFF8" stroke-width="1"/>
+  <!-- Powder in scoop -->
+  <ellipse cx="58" cy="29" rx="5" ry="3" fill="white" opacity="0.5"/>
+
+  <!-- Bottom rim -->
+  <rect x="18" y="72" width="48" height="4" rx="4" fill="#E8D090"/>
+
+  <!-- Floating powder dots -->
+  <circle cx="14" cy="44" r="2" fill="#B0DFF8" opacity="0.5"/>
+  <circle cx="72" cy="38" r="1.5" fill="#B0DFF8" opacity="0.4"/>
+  <circle cx="12" cy="58" r="1.5" fill="#B0DFF8" opacity="0.35"/>
+</svg>

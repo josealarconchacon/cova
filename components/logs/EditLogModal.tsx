@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import {
   Modal,
@@ -13,6 +14,11 @@ import {
 import { Colors } from "../../constants/theme";
 import type { Log } from "../../types";
 import { TimePickerField } from "./TimePickerField";
+import {
+  BreastMilkIcon,
+  FormulaIcon,
+  OtherLiquidIcon,
+} from "../../assets/icons/QuickActionIcons";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,9 +27,9 @@ const ML_PER_OZ = 29.5735;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const MILK_OPTIONS = [
-  { id: "breast_milk" as const, icon: "🤱", label: "Breast Milk" },
-  { id: "formula"    as const, icon: "🥛", label: "Formula"     },
-  { id: "other"      as const, icon: "💧", label: "Other"       },
+  { id: "breast_milk" as const, Icon: BreastMilkIcon, label: "Breast Milk", color: Colors.dusk },
+  { id: "formula"    as const, Icon: FormulaIcon,     label: "Formula",     color: "#3A9ED8"  },
+  { id: "other"      as const, Icon: OtherLiquidIcon, label: "Other",       color: "#7B1FA2"  },
 ];
 
 const AMOUNTS = [
@@ -231,7 +237,7 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
                         style={[s.optionBtn, milkType === o.id && s.optionBtnActive]}
                         onPress={() => setMilkType(o.id)}
                       >
-                        <Text style={{ fontSize: 18 }}>{o.icon}</Text>
+                        <o.Icon size={22} color={milkType === o.id ? Colors.moss : o.color} />
                         <Text
                           style={[
                             s.optionLabel,
