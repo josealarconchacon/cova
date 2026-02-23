@@ -252,6 +252,7 @@ export default function HomeScreen() {
     });
 
     queryClient.invalidateQueries({ queryKey: logsQueryKey });
+    queryClient.invalidateQueries({ queryKey: ["insights-logs", activeBaby?.id] });
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
@@ -286,6 +287,7 @@ export default function HomeScreen() {
       notes: note,
       metadata,
     });
+    queryClient.invalidateQueries({ queryKey: ["insights-logs", activeBaby?.id] });
   };
 
   // ── Delete a log ────────────────────────────────────────────────────────
@@ -323,6 +325,7 @@ export default function HomeScreen() {
 
       console.log("[delete] success");
       queryClient.invalidateQueries({ queryKey: logsQueryKey });
+      queryClient.invalidateQueries({ queryKey: ["insights-logs", activeBaby?.id] });
     } catch (e: any) {
       console.error("[delete] unexpected error:", e?.message);
       queryClient.setQueryData(logsQueryKey, previous);
@@ -342,6 +345,7 @@ export default function HomeScreen() {
       return;
     }
     queryClient.invalidateQueries({ queryKey: logsQueryKey });
+    queryClient.invalidateQueries({ queryKey: ["insights-logs", activeBaby?.id] });
     setEditingLog(null);
   };
 

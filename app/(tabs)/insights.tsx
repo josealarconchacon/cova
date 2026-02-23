@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { useRealtimeSync } from "../../lib/useRealtimeSync";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 import {
@@ -257,7 +258,7 @@ function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
 }
 
 export default function InsightsScreen() {
-  const { activeBaby } = useStore();
+  const { profile, activeBaby } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>("feeds");
 
   const sevenDaysAgo = new Date();
@@ -266,9 +267,16 @@ export default function InsightsScreen() {
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
+  const insightsQueryKey = useMemo(
+    () => ["insights-logs", activeBaby?.id],
+    [activeBaby?.id],
+  );
+
   const { data: allLogs = [] } = useQuery({
-    queryKey: ["insights-logs", activeBaby?.id],
+    queryKey: insightsQueryKey,
     enabled: !!activeBaby,
+    refetchOnMount: "always",
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("logs")
@@ -279,6 +287,13 @@ export default function InsightsScreen() {
       if (error) throw error;
       return data as Log[];
     },
+  });
+
+  useRealtimeSync({
+    familyId: profile?.family_id ?? "",
+    babyId: activeBaby?.id ?? "",
+    table: "logs",
+    queryKey: insightsQueryKey,
   });
 
   const sevenDaysAgoISO = sevenDaysAgo.toISOString();
