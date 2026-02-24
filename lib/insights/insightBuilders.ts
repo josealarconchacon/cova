@@ -5,6 +5,7 @@ import {
   SleepIcon,
   StartTimerIcon,
 } from "../../assets/icons/QuickActionIcons";
+import { formatDayName } from "./constants";
 import { hourRangeLabel } from "../useWeeklyStats";
 import type { WeeklyStats } from "../useWeeklyStats";
 import type { Baby } from "../../types";
@@ -17,66 +18,129 @@ export interface InsightCard {
   IconComponent?: React.ComponentType<{ size?: number; color?: string }>;
 }
 
+const IRREGULAR_GAP_THRESHOLD_MIN = 300;
+
 export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
   const cards: InsightCard[] = [];
   const { feedInsights } = stats;
 
   const hasNursing = feedInsights.nursingTotal > 0;
   const hasBottle = feedInsights.bottleTotal > 0;
+  const feedTotal = stats.totalFeeds;
 
-  if (hasNursing || hasBottle) {
-    const parts: string[] = [];
-    if (hasNursing) parts.push(`${feedInsights.nursingTotal} nursing`);
-    if (hasBottle) parts.push(`${feedInsights.bottleTotal} bottle`);
+  if (feedTotal === 0) {
     cards.push({
-      icon: "🍼",
-      title: "Nursing vs Bottle",
-      text: `${parts.join(", ")} — ${stats.totalFeeds} total feeds this week.`,
-      color: Colors.dusk,
-      IconComponent: FeedIcon,
+      icon: "📝",
+      title: "No feed data yet",
+      text: "Start logging feeds to see patterns here.",
+      color: Colors.inkLight,
+    });
+    return cards;
+  }
+
+  const parts: string[] = [];
+  if (hasNursing) parts.push(`${feedInsights.nursingTotal} nursing`);
+  if (hasBottle) parts.push(`${feedInsights.bottleTotal} bottle`);
+  const pctParts: string[] = [];
+  if (feedInsights.nursingPct > 0)
+    pctParts.push(`${feedInsights.nursingPct}% nursing`);
+  if (feedInsights.bottlePct > 0)
+    pctParts.push(`${feedInsights.bottlePct}% bottle`);
+  cards.push({
+    icon: "🍼",
+    title: "Feed Type Breakdown",
+    text: `${parts.join(", ")} — ${feedTotal} total feeds this week. ${pctParts.length > 0 ? `(${pctParts.join(" / ")})` : ""}`,
+    color: Colors.dusk,
+    IconComponent: FeedIcon,
+  });
+
+  const peakDayName =
+    feedInsights.peakDayIndex != null
+      ? formatDayName(stats.days[feedInsights.peakDayIndex].date)
+      : null;
+  const leastDayName =
+    feedInsights.leastActiveDayIndex != null
+      ? formatDayName(stats.days[feedInsights.leastActiveDayIndex].date)
+      : null;
+  const peakCount =
+    feedInsights.peakDayIndex != null
+      ? stats.days[feedInsights.peakDayIndex].feedCount
+      : 0;
+  const leastCount =
+    feedInsights.leastActiveDayIndex != null
+      ? stats.days[feedInsights.leastActiveDayIndex].feedCount
+      : 0;
+  const freqParts: string[] = [
+    `Average ${stats.avgFeeds} feeds per day`,
+  ];
+  if (peakDayName && leastDayName) {
+    if (peakDayName !== leastDayName) {
+      freqParts.push(
+        `Most active: ${peakDayName} (${peakCount}), least: ${leastDayName} (${leastCount})`,
+      );
+    } else {
+      freqParts.push(`All days similar (${peakCount} feeds/day)`);
+    }
+  }
+  cards.push({
+    icon: "📈",
+    title: "Feeding Frequency",
+    text: freqParts.join(". "),
+    color: Colors.teal,
+  });
+
+  cards.push({
+    icon: "⚖️",
+    title: "Nursing Side Balance",
+    text: "Log nursing side (left/right) when recording feeds to see balance and flag any imbalance over 60/40.",
+    color: Colors.inkLight,
+  });
+
+  if (hasBottle && feedInsights.bottleAvgMl > 0) {
+    const prev = feedInsights.prevBottleAvgMl;
+    const curr = feedInsights.bottleAvgMl;
+    let trend = "no prior week to compare";
+    if (prev > 0) {
+      const pct = Math.round(((curr - prev) / prev) * 100);
+      if (pct > 5) trend = `↑ ${pct}% vs last week`;
+      else if (pct < -5) trend = `↓ ${Math.abs(pct)}% vs last week`;
+      else trend = "similar to last week";
+    }
+    cards.push({
+      icon: "🥛",
+      title: "Feed Volume Trend",
+      text: `Average ~${feedInsights.bottleAvgMl} ml per bottle feed this week — ${trend}.`,
+      color: Colors.moss,
     });
   }
 
-  if (hasNursing && hasBottle) {
-    const parts: string[] = [];
-    if (feedInsights.nursingAvgMin > 0)
-      parts.push(`Nursing avg: ${feedInsights.nursingAvgMin} min`);
-    if (feedInsights.bottleAvgMin > 0)
-      parts.push(`Bottle avg: ${feedInsights.bottleAvgMin} min`);
-    if (feedInsights.bottleAvgMl > 0)
-      parts.push(`~${feedInsights.bottleAvgMl} ml/feed`);
-    if (parts.length > 0) {
-      cards.push({
-        icon: "⏱️",
-        title: "Duration comparison",
-        text: `${parts.join(". ")}.`,
-        color: Colors.moss,
-        IconComponent: StartTimerIcon,
-      });
+  const hungerParts: string[] = [];
+  if (feedInsights.peakHour != null) {
+    hungerParts.push(
+      `Most feeds happen between ${hourRangeLabel(feedInsights.peakHour)}`,
+    );
+  }
+  if (feedInsights.maxGapMin != null) {
+    const hrs = Math.floor(feedInsights.maxGapMin / 60);
+    const mins = Math.round(feedInsights.maxGapMin % 60);
+    const gapStr = hrs > 0 ? `${hrs}h ${mins}min` : `${mins} min`;
+    if (feedInsights.maxGapMin >= IRREGULAR_GAP_THRESHOLD_MIN) {
+      hungerParts.push(
+        `Longest gap: ${gapStr} — may exceed age-typical intervals`,
+      );
+    } else if (feedInsights.avgGapMin != null) {
+      hungerParts.push(
+        `Average gap between feeds: ~${Math.round(feedInsights.avgGapMin)} min`,
+      );
     }
-  } else if (hasNursing && feedInsights.nursingAvgMin > 0) {
+  }
+  if (hungerParts.length > 0) {
     cards.push({
-      icon: "⏱️",
-      title: "Nursing duration",
-      text: `Average nursing session: ${feedInsights.nursingAvgMin} min.`,
-      color: Colors.moss,
-      IconComponent: StartTimerIcon,
+      icon: "🕐",
+      title: "Hunger Pattern",
+      text: hungerParts.join(". "),
+      color: Colors.teal,
     });
-  } else if (hasBottle) {
-    const parts: string[] = [];
-    if (feedInsights.bottleAvgMin > 0)
-      parts.push(`Avg session: ${feedInsights.bottleAvgMin} min`);
-    if (feedInsights.bottleAvgMl > 0)
-      parts.push(`~${feedInsights.bottleAvgMl} ml per feed`);
-    if (parts.length > 0) {
-      cards.push({
-        icon: "⏱️",
-        title: "Bottle details",
-        text: `${parts.join(". ")}.`,
-        color: Colors.moss,
-        IconComponent: StartTimerIcon,
-      });
-    }
   }
 
   if (feedInsights.nightFeedCount > 0) {
@@ -87,7 +151,7 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
       color: Colors.sky,
       IconComponent: SleepIcon,
     });
-  } else if (stats.totalFeeds > 0) {
+  } else if (feedTotal > 0) {
     cards.push({
       icon: "🌙",
       title: "No night feeds",
@@ -97,21 +161,19 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
     });
   }
 
-  if (feedInsights.peakHour != null) {
+  if (
+    feedInsights.nursingVsBottleShift != null &&
+    feedInsights.nursingVsBottleShift !== "balanced"
+  ) {
+    const shiftLabel =
+      feedInsights.nursingVsBottleShift === "more_nursing"
+        ? "more nursing"
+        : "more bottle";
     cards.push({
-      icon: "📈",
-      title: "Peak feeding time",
-      text: `Most feeds happen around ${hourRangeLabel(feedInsights.peakHour)}.`,
-      color: Colors.teal,
-    });
-  }
-
-  if (cards.length === 0) {
-    cards.push({
-      icon: "📝",
-      title: "No feed data yet",
-      text: "Start logging feeds to see patterns here.",
-      color: Colors.inkLight,
+      icon: "📊",
+      title: "Nursing vs Bottle Shift",
+      text: `This week shows ${shiftLabel} compared to last week.`,
+      color: Colors.dusk,
     });
   }
 

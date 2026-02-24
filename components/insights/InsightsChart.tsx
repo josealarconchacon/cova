@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, Pressable, Animated } from "react-native";
 import { Colors } from "../../constants/theme";
 import { styles } from "../../app/(tabs)/insights.styles";
 import {
@@ -28,6 +28,8 @@ function FeedBar({
   dayIndex,
   onPress,
   isSelected,
+  isPeakDay,
+  isDimmed,
 }: {
   day: DailyStats;
   val: number;
@@ -37,29 +39,60 @@ function FeedBar({
   dayIndex: number;
   onPress: () => void;
   isSelected: boolean;
+  isPeakDay: boolean;
+  isDimmed: boolean;
 }) {
-  const pct = (val / maxVal) * 100;
+  const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
   const totalPct = Math.max(pct, 4);
   const nursingFrac = val > 0 ? day.nursingCount / val : 0;
   const bottleFrac = val > 0 ? day.bottleCount / val : 0;
   const hasBoth = day.nursingCount > 0 && day.bottleCount > 0;
+  const isZeroDay = val === 0;
+  const opacity = isDimmed ? 0.45 : 1;
+
+  if (isZeroDay) {
+    return (
+      <Pressable
+        style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+        onPress={onPress}
+      >
+        <View style={styles.barTrack}>
+          <View style={styles.zeroFeedPlaceholder}>
+            <Text style={styles.zeroFeedPlaceholderText}>—</Text>
+          </View>
+        </View>
+        <Text
+          style={[
+            styles.dayLabel,
+            isToday && { color: accentColor, fontWeight: "700" },
+            isSelected && { color: accentColor, fontWeight: "700" },
+          ]}
+        >
+          {WEEK_DAYS[dayIndex]}
+        </Text>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected]}
+      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
       onPress={onPress}
     >
+      {isPeakDay && (
+        <View style={styles.peakIndicator}>
+          <Text style={styles.peakIndicatorText}>Peak</Text>
+        </View>
+      )}
       <View style={styles.barTrack}>
-        {val > 0 && (
-          <Text
-            style={[
-              styles.barValue,
-              { color: isToday ? accentColor : Colors.inkLight },
-            ]}
-          >
-            {val}
-          </Text>
-        )}
+        <Text
+          style={[
+            styles.barValue,
+            { color: isToday ? accentColor : Colors.inkLight },
+          ]}
+        >
+          {val}
+        </Text>
         <View
           style={{
             width: "70%",
@@ -110,6 +143,7 @@ function DiaperBar({
   dayIndex,
   onPress,
   isSelected,
+  isDimmed,
 }: {
   day: DailyStats;
   val: number;
@@ -119,6 +153,7 @@ function DiaperBar({
   dayIndex: number;
   onPress: () => void;
   isSelected: boolean;
+  isDimmed: boolean;
 }) {
   const pct = (val / maxVal) * 100;
   const totalPct = Math.max(pct, 4);
@@ -126,9 +161,10 @@ function DiaperBar({
   const dirtyFrac = val > 0 ? day.dirtyCount / val : 0;
   const bothFrac = val > 0 ? day.bothCount / val : 0;
 
+  const opacity = isDimmed ? 0.45 : 1;
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected]}
+      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
       onPress={onPress}
     >
       <View style={styles.barTrack}>
@@ -204,6 +240,7 @@ function SleepBar({
   dayIndex,
   onPress,
   isSelected,
+  isDimmed,
 }: {
   day: DailyStats;
   val: number;
@@ -213,16 +250,18 @@ function SleepBar({
   dayIndex: number;
   onPress: () => void;
   isSelected: boolean;
+  isDimmed: boolean;
 }) {
   const pct = (val / maxVal) * 100;
   const totalPct = Math.max(pct, 4);
   const napFrac = val > 0 ? day.napHours / val : 0;
   const nightFrac = val > 0 ? day.nightHours / val : 0;
   const hasBoth = day.napHours > 0 && day.nightHours > 0;
+  const opacity = isDimmed ? 0.45 : 1;
 
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected]}
+      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
       onPress={onPress}
     >
       <View style={styles.barTrack}>
@@ -287,19 +326,33 @@ function BarDetailView({
   accentColor,
   aapMin,
   aapMax,
+  isPeakDay,
 }: {
   day: DailyStats;
   activeTab: Tab;
   accentColor: string;
   aapMin: number;
   aapMax: number;
+  isPeakDay?: boolean;
 }) {
   const dayName = formatDayName(day.date);
 
   if (activeTab === "feeds") {
     const lines: string[] = [];
-    if (day.nursingCount > 0) lines.push(`${day.nursingCount} nursing`);
-    if (day.bottleCount > 0) lines.push(`${day.bottleCount} bottle`);
+    if (day.nursingCount > 0) {
+      const part = `${day.nursingCount} nursing`;
+      const extra =
+        day.nursingDurationMin > 0
+          ? ` (${Math.round(day.nursingDurationMin)} min total)`
+          : "";
+      lines.push(part + extra);
+    }
+    if (day.bottleCount > 0) {
+      const part = `${day.bottleCount} bottle`;
+      const extra =
+        day.bottleTotalMl > 0 ? ` (${day.bottleTotalMl} ml total)` : "";
+      lines.push(part + extra);
+    }
     const detail = lines.length > 0 ? lines.join(" · ") : "No feeds";
     return (
       <View style={styles.barDetail}>
@@ -312,6 +365,13 @@ function BarDetailView({
             {detail} — {day.feedCount} total
           </Text>
         </Text>
+        {isPeakDay && (
+          <Text
+            style={[styles.barDetailSub, { color: Colors.teal, fontWeight: "600" }]}
+          >
+            Most active day this week
+          </Text>
+        )}
       </View>
     );
   }
@@ -381,10 +441,19 @@ export function InsightsChart({
   accentColor,
 }: InsightsChartProps) {
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const detailOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     setSelectedDayIndex(null);
   }, [activeTab]);
+
+  useEffect(() => {
+    Animated.timing(detailOpacity, {
+      toValue: selectedDayIndex != null ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedDayIndex, detailOpacity]);
 
   const isSleep = activeTab === "sleep";
   const aapMin = stats.sleepInsights.aapRecommendedMin;
@@ -401,8 +470,41 @@ export function InsightsChart({
     setSelectedDayIndex((prev) => (prev === index ? null : index));
   };
 
+  const isFeeds = activeTab === "feeds";
+  const feedWow = stats.weekOverWeek.feedsPctChange;
+  const avgFeeds = stats.avgFeeds;
+  const avgLinePct =
+    isFeeds && maxVal > 0 && avgFeeds > 0
+      ? Math.min(95, Math.max(5, (avgFeeds / maxVal) * 100))
+      : null;
+  const peakDayIndex = stats.feedInsights.peakDayIndex;
+
   return (
-    <View>
+    <View style={{ position: "relative" }}>
+      {isFeeds && feedWow != null && (
+        <View style={styles.trendArrowWrap}>
+          <Text
+            style={[
+              styles.trendArrowText,
+              {
+                color:
+                  feedWow > 0
+                    ? Colors.teal
+                    : feedWow < 0
+                      ? Colors.dusk
+                      : Colors.inkLight,
+              },
+            ]}
+          >
+            {feedWow > 0 ? "↑" : feedWow < 0 ? "↓" : "→"}{" "}
+            {feedWow > 0 ? "+" : ""}
+            {feedWow}%
+          </Text>
+          <Text style={[styles.trendArrowText, { color: Colors.inkLight, fontWeight: "500", fontSize: 10 }]}>
+            vs last week
+          </Text>
+        </View>
+      )}
       <View style={styles.chartArea}>
         {[0.25, 0.5, 0.75].map((frac) => (
           <View
@@ -420,10 +522,20 @@ export function InsightsChart({
             <View style={styles.referenceLineTrack} />
           </View>
         )}
+        {avgLinePct != null && (
+          <View style={[styles.referenceLine, { bottom: `${avgLinePct}%` }]}>
+            <Text style={styles.avgLineLabel}>
+              Avg {avgFeeds.toFixed(1)}
+            </Text>
+            <View style={styles.avgLine} />
+          </View>
+        )}
         <View style={styles.barsRow}>
         {chartData.map((val: number, i: number) => {
           const isToday = i === 6;
           const day = stats.days[i];
+          const isDimmed =
+            selectedDayIndex != null && selectedDayIndex !== i;
 
           if (activeTab === "feeds") {
             return (
@@ -437,6 +549,8 @@ export function InsightsChart({
                 dayIndex={i}
                 onPress={() => handleBarPress(i)}
                 isSelected={selectedDayIndex === i}
+                isPeakDay={peakDayIndex === i}
+                isDimmed={isDimmed}
               />
             );
           }
@@ -453,6 +567,7 @@ export function InsightsChart({
                 dayIndex={i}
                 onPress={() => handleBarPress(i)}
                 isSelected={selectedDayIndex === i}
+                isDimmed={isDimmed}
               />
             );
           }
@@ -468,19 +583,26 @@ export function InsightsChart({
               dayIndex={i}
               onPress={() => handleBarPress(i)}
               isSelected={selectedDayIndex === i}
+              isDimmed={isDimmed}
             />
           );
         })}
         </View>
       </View>
       {selectedDayIndex != null ? (
-        <BarDetailView
-          day={stats.days[selectedDayIndex]}
-          activeTab={activeTab}
-          accentColor={accentColor}
-          aapMin={aapMin}
-          aapMax={aapMax}
-        />
+        <Animated.View style={{ opacity: detailOpacity }}>
+          <BarDetailView
+            day={stats.days[selectedDayIndex]}
+            activeTab={activeTab}
+            accentColor={accentColor}
+            aapMin={aapMin}
+            aapMax={aapMax}
+            isPeakDay={
+              activeTab === "feeds" &&
+              stats.feedInsights.peakDayIndex === selectedDayIndex
+            }
+          />
+        </Animated.View>
       ) : (
         <Text style={styles.barDetailHint}>Tap a bar for details</Text>
       )}

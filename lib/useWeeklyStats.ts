@@ -6,6 +6,8 @@ export interface DailyStats {
   feedCount: number;
   nursingCount: number;
   bottleCount: number;
+  nursingDurationMin: number;
+  bottleTotalMl: number;
   sleepHours: number;
   napHours: number;
   nightHours: number;
@@ -17,6 +19,8 @@ export interface DailyStats {
 
 export interface FeedInsights {
   peakHour: number | null;
+  peakDayIndex: number | null;
+  leastActiveDayIndex: number | null;
   avgDurationMin: number;
   nightFeedCount: number;
   nursingTotal: number;
@@ -24,6 +28,12 @@ export interface FeedInsights {
   nursingAvgMin: number;
   bottleAvgMin: number;
   bottleAvgMl: number;
+  nursingPct: number;
+  bottlePct: number;
+  prevBottleAvgMl: number;
+  nursingVsBottleShift: "more_nursing" | "more_bottle" | "balanced" | null;
+  maxGapMin: number | null;
+  avgGapMin: number | null;
 }
 
 export interface SleepInsights {
@@ -111,6 +121,8 @@ export function useWeeklyStats(
         feedCount: 0,
         nursingCount: 0,
         bottleCount: 0,
+        nursingDurationMin: 0,
+        bottleTotalMl: 0,
         sleepHours: 0,
         napHours: 0,
         nightHours: 0,
@@ -128,8 +140,16 @@ export function useWeeklyStats(
       if (log.type === "feed") {
         day.feedCount++;
         const ft = (log.metadata?.feed_type as string) ?? "";
-        if (ft === "bottle") day.bottleCount++;
-        else day.nursingCount++;
+        if (ft === "bottle") {
+          day.bottleCount++;
+          const amt = log.metadata?.amount_ml as number | undefined;
+          if (amt != null) day.bottleTotalMl += amt;
+        } else {
+          day.nursingCount++;
+          if (log.duration_seconds != null && log.duration_seconds > 0) {
+            day.nursingDurationMin += log.duration_seconds / 60;
+          }
+        }
       }
       if (log.type === "diaper") {
         day.diaperCount++;
@@ -155,6 +175,7 @@ export function useWeeklyStats(
       d.sleepHours = Math.round(d.sleepHours * 10) / 10;
       d.napHours = Math.round(d.napHours * 10) / 10;
       d.nightHours = Math.round(d.nightHours * 10) / 10;
+      d.nursingDurationMin = Math.round(d.nursingDurationMin * 10) / 10;
     });
 
     const n = days.length;
@@ -200,10 +221,86 @@ export function useWeeklyStats(
         ? Math.round(bottleAmounts.reduce((a, b) => a + b, 0) / bottleAmounts.length)
         : 0;
 
+    const prevBottleLogs = previousWeekLogs.filter(
+      (l) => l.type === "feed" && (l.metadata?.feed_type as string) === "bottle",
+    );
+    const prevBottleAmounts = prevBottleLogs
+      .filter((l) => l.metadata?.amount_ml != null)
+      .map((l) => l.metadata!.amount_ml as number);
+    const prevBottleAvgMl =
+      prevBottleAmounts.length > 0
+        ? Math.round(prevBottleAmounts.reduce((a, b) => a + b, 0) / prevBottleAmounts.length)
+        : 0;
+
+    const feedTotal = nursingLogs.length + bottleLogs.length || 1;
+    const nursingPct = Math.round((nursingLogs.length / feedTotal) * 100);
+    const bottlePct = Math.round((bottleLogs.length / feedTotal) * 100);
+
+    const prevNursing = previousWeekLogs.filter(
+      (l) => l.type === "feed" && (l.metadata?.feed_type as string) !== "bottle",
+    ).length;
+    const prevBottle = prevBottleLogs.length;
+    const prevFeedTotal = prevNursing + prevBottle || 1;
+    const prevNursingPct = prevFeedTotal > 0 ? prevNursing / prevFeedTotal : 0.5;
+    const prevBottlePct = prevFeedTotal > 0 ? prevBottle / prevFeedTotal : 0.5;
+    const currNursingPct = nursingLogs.length / feedTotal;
+    const currBottlePct = bottleLogs.length / feedTotal;
+    const nursingShift = currNursingPct - prevNursingPct;
+    const bottleShift = currBottlePct - prevBottlePct;
+    let nursingVsBottleShift: FeedInsights["nursingVsBottleShift"] = null;
+    if (feedTotal > 0 && prevFeedTotal > 0) {
+      if (nursingShift > 0.1) nursingVsBottleShift = "more_nursing";
+      else if (bottleShift > 0.1) nursingVsBottleShift = "more_bottle";
+      else nursingVsBottleShift = "balanced";
+    }
+
+    let peakDayIndex: number | null = null;
+    let leastActiveDayIndex: number | null = null;
+    let maxFeeds = 0;
+    let minFeeds = Infinity;
+    days.forEach((d, i) => {
+      if (d.feedCount > maxFeeds) {
+        maxFeeds = d.feedCount;
+        peakDayIndex = i;
+      }
+      if (d.feedCount < minFeeds) {
+        minFeeds = d.feedCount;
+        leastActiveDayIndex = i;
+      }
+    });
+    if (totalFeeds === 0) {
+      peakDayIndex = null;
+      leastActiveDayIndex = null;
+    }
+
     const nightFeedCount = feedLogs.filter((l) => {
       const h = new Date(l.started_at).getHours();
       return h >= 22 || h < 6;
     }).length;
+
+    let maxGapMin: number | null = null;
+    let avgGapMin: number | null = null;
+    if (feedLogs.length >= 2) {
+      const sorted = [...feedLogs].sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      );
+      const gaps: number[] = [];
+      for (let i = 1; i < sorted.length; i++) {
+        const prevEnd = sorted[i - 1].started_at;
+        const prevDur = (sorted[i - 1].duration_seconds ?? 0) * 1000;
+        const prevEndTime = new Date(prevEnd).getTime() + prevDur;
+        const nextStart = new Date(sorted[i].started_at).getTime();
+        const gapMin = (nextStart - prevEndTime) / 60000;
+        if (gapMin > 0 && gapMin < 24 * 60) gaps.push(gapMin);
+      }
+      if (gaps.length > 0) {
+        maxGapMin = Math.round(Math.max(...gaps));
+        avgGapMin = Math.round(
+          gaps.reduce((a, b) => a + b, 0) / gaps.length,
+        );
+      }
+    }
 
     // ── Sleep insights ──
     const sleepLogs = currentWeekLogs
@@ -317,6 +414,8 @@ export function useWeeklyStats(
       avgDiapers: Math.round((totalDiapers / n) * 10) / 10,
       feedInsights: {
         peakHour: computePeakHour(currentWeekLogs, "feed"),
+        peakDayIndex,
+        leastActiveDayIndex,
         avgDurationMin,
         nightFeedCount,
         nursingTotal: nursingLogs.length,
@@ -324,6 +423,12 @@ export function useWeeklyStats(
         nursingAvgMin: avgDur(nursingLogs),
         bottleAvgMin: avgDur(bottleLogs),
         bottleAvgMl,
+        nursingPct,
+        bottlePct,
+        prevBottleAvgMl,
+        nursingVsBottleShift,
+        maxGapMin,
+        avgGapMin,
       },
       sleepInsights: {
         bestDay,
