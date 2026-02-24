@@ -181,7 +181,7 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
   return cards;
 }
 
-function getAapRecommendation(baby: Baby | null): { min: number; max: number } {
+function getSleepRecommendation(baby: Baby | null): { min: number; max: number } {
   if (!baby?.date_of_birth) return { min: 14, max: 17 };
   const dob = new Date(baby.date_of_birth);
   const now = new Date();
@@ -221,7 +221,7 @@ export function buildSleepInsights(
 ): InsightCard[] {
   const cards: InsightCard[] = [];
   const { sleepInsights } = stats;
-  const aap = getAapRecommendation(baby);
+  const recommended = getSleepRecommendation(baby);
   const avgPerDay = stats.totalSleepHours / 7;
 
   cards.push({
@@ -229,8 +229,8 @@ export function buildSleepInsights(
     title: "Sleep Debt Tracker",
     text:
       stats.totalSleepHours > 0
-        ? `Baby slept ${avgPerDay.toFixed(1)} hrs/day this week — AAP recommends ${aap.min}–${aap.max} hrs for ${baby?.date_of_birth ? "this age" : "newborns"}.`
-        : "Log sleep to compare against AAP age-recommended totals (14–17 hrs for newborns).",
+        ? `Baby slept ${avgPerDay.toFixed(1)} hrs/day this week — recommended: ${recommended.min}–${recommended.max} hrs for ${baby?.date_of_birth ? "this age" : "newborns"}.`
+        : "Log sleep to compare against age-recommended totals (14–17 hrs for newborns).",
     color: Colors.sky,
     IconComponent: SleepIcon,
   });

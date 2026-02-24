@@ -48,8 +48,8 @@ export interface SleepInsights {
   avgWakeWindowMin: number | null;
   nightWakingsCount: number;
   sleepQualityScore: number | null;
-  aapRecommendedMin: number;
-  aapRecommendedMax: number;
+  recommendedMin: number;
+  recommendedMax: number;
 }
 
 export interface DiaperInsights {
@@ -388,7 +388,7 @@ export function useWeeklyStats(
           )
         : 0;
 
-    const aapNewborn = { min: 14, max: 17 };
+    const recommendedSleepNewborn = { min: 14, max: 17 };
 
     // ── Diaper insights ──
     const diaperLogs = currentWeekLogs.filter((l) => l.type === "diaper");
@@ -416,8 +416,8 @@ export function useWeeklyStats(
     const dirtyPct = Math.round((dirtyTotal / diaperTotal) * 100);
     const bothPct = Math.round((bothTotal / diaperTotal) * 100);
 
-    const AAP_MIN_DIAPERS_PER_DAY = 6;
-    const AAP_MIN_WET_PER_DAY = 6;
+    const MIN_DIAPERS_PER_DAY_RECOMMENDED = 6;
+    const MIN_WET_PER_DAY_RECOMMENDED = 6;
     let diaperPeakDayIndex: number | null = null;
     let diaperLeastActiveDayIndex: number | null = null;
     const lowActivityDayIndices: number[] = [];
@@ -433,10 +433,10 @@ export function useWeeklyStats(
         minDiapers = d.diaperCount;
         diaperLeastActiveDayIndex = i;
       }
-      if (d.diaperCount > 0 && d.diaperCount < AAP_MIN_DIAPERS_PER_DAY) {
+      if (d.diaperCount > 0 && d.diaperCount < MIN_DIAPERS_PER_DAY_RECOMMENDED) {
         lowActivityDayIndices.push(i);
       }
-      if (d.diaperCount > 0 && d.wetCount < AAP_MIN_WET_PER_DAY) {
+      if (d.diaperCount > 0 && d.wetCount < MIN_WET_PER_DAY_RECOMMENDED) {
         lowWetDayIndices.push(i);
       }
     });
@@ -531,8 +531,8 @@ export function useWeeklyStats(
         avgWakeWindowMin,
         nightWakingsCount,
         sleepQualityScore,
-        aapRecommendedMin: aapNewborn.min,
-        aapRecommendedMax: aapNewborn.max,
+        recommendedMin: recommendedSleepNewborn.min,
+        recommendedMax: recommendedSleepNewborn.max,
       },
       diaperInsights: {
         wetTotal,

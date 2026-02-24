@@ -361,16 +361,16 @@ function BarDetailView({
   day,
   activeTab,
   accentColor,
-  aapMin,
-  aapMax,
+  recommendedMin,
+  recommendedMax,
   isPeakDay,
   isLowActivity,
 }: {
   day: DailyStats;
   activeTab: Tab;
   accentColor: string;
-  aapMin: number;
-  aapMax: number;
+  recommendedMin: number;
+  recommendedMax: number;
   isPeakDay?: boolean;
   isLowActivity?: boolean;
 }) {
@@ -456,12 +456,12 @@ function BarDetailView({
   const parts = [napStr, nightStr].filter(Boolean);
   const detail =
     parts.length > 0 ? parts.join(" · ") + ` — ${day.sleepHours}h total` : "No sleep";
-  const meetsAap = day.sleepHours > 0 && day.sleepHours >= aapMin;
-  const vsAap =
+  const meetsTarget = day.sleepHours > 0 && day.sleepHours >= recommendedMin;
+  const vsTarget =
     day.sleepHours > 0
-      ? meetsAap
-        ? `Meets AAP (${aapMin}–${aapMax}h)`
-        : `Below AAP target (${aapMin}–${aapMax}h)`
+      ? meetsTarget
+        ? `Meets recommended (${recommendedMin}–${recommendedMax}h)`
+        : `Below recommended target (${recommendedMin}–${recommendedMax}h)`
       : null;
 
   return (
@@ -473,14 +473,14 @@ function BarDetailView({
         {" · "}
         <Text style={styles.barDetailValue}>{detail}</Text>
       </Text>
-      {vsAap && (
+      {vsTarget && (
         <Text
           style={[
             styles.barDetailSub,
-            meetsAap ? { color: Colors.teal } : { color: Colors.inkLight },
+            meetsTarget ? { color: Colors.teal } : { color: Colors.inkLight },
           ]}
         >
-          {vsAap}
+          {vsTarget}
         </Text>
       )}
     </View>
@@ -510,14 +510,14 @@ export function InsightsChart({
   }, [selectedDayIndex, detailOpacity]);
 
   const isSleep = activeTab === "sleep";
-  const aapMin = stats.sleepInsights.aapRecommendedMin;
-  const aapMax = stats.sleepInsights.aapRecommendedMax;
+  const recommendedMin = stats.sleepInsights.recommendedMin;
+  const recommendedMax = stats.sleepInsights.recommendedMax;
   const effectiveMax = isSleep
-    ? Math.max(maxVal, aapMax * 1.15)
+    ? Math.max(maxVal, recommendedMax * 1.15)
     : maxVal;
-  const aapLinePct =
+  const recommendedLinePct =
     isSleep && effectiveMax > 0
-      ? Math.min(95, Math.max(5, (aapMin / effectiveMax) * 100))
+      ? Math.min(95, Math.max(5, (recommendedMin / effectiveMax) * 100))
       : null;
 
   const handleBarPress = (index: number) => {
@@ -579,12 +579,12 @@ export function InsightsChart({
             style={[styles.gridLine, { bottom: `${frac * 100}%` }]}
           />
         ))}
-        {aapLinePct != null && (
+        {recommendedLinePct != null && (
           <View
-            style={[styles.referenceLine, { bottom: `${aapLinePct}%` }]}
+            style={[styles.referenceLine, { bottom: `${recommendedLinePct}%` }]}
           >
             <Text style={styles.referenceLineLabel}>
-              AAP {aapMin}–{aapMax}h
+              Recommended {recommendedMin}–{recommendedMax}h
             </Text>
             <View style={styles.referenceLineTrack} />
           </View>
@@ -666,8 +666,8 @@ export function InsightsChart({
             day={stats.days[selectedDayIndex]}
             activeTab={activeTab}
             accentColor={accentColor}
-            aapMin={aapMin}
-            aapMax={aapMax}
+            recommendedMin={recommendedMin}
+            recommendedMax={recommendedMax}
             isPeakDay={
               (activeTab === "feeds" &&
                 stats.feedInsights.peakDayIndex === selectedDayIndex) ||
