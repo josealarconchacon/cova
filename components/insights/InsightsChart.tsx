@@ -144,6 +144,8 @@ function DiaperBar({
   onPress,
   isSelected,
   isDimmed,
+  isPeakDay,
+  isLowActivity,
 }: {
   day: DailyStats;
   val: number;
@@ -154,36 +156,70 @@ function DiaperBar({
   onPress: () => void;
   isSelected: boolean;
   isDimmed: boolean;
+  isPeakDay: boolean;
+  isLowActivity: boolean;
 }) {
-  const pct = (val / maxVal) * 100;
+  const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
   const totalPct = Math.max(pct, 4);
   const wetFrac = val > 0 ? day.wetCount / val : 0;
   const dirtyFrac = val > 0 ? day.dirtyCount / val : 0;
   const bothFrac = val > 0 ? day.bothCount / val : 0;
-
+  const isZeroDay = val === 0;
   const opacity = isDimmed ? 0.45 : 1;
+  const barOpacity = isLowActivity && !isZeroDay ? 0.75 : 1;
+
+  if (isZeroDay) {
+    return (
+      <Pressable
+        style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+        onPress={onPress}
+      >
+        <View style={styles.barTrack}>
+          <View style={styles.zeroFeedPlaceholder}>
+            <Text style={styles.zeroFeedPlaceholderText}>—</Text>
+          </View>
+        </View>
+        <Text
+          style={[
+            styles.dayLabel,
+            isToday && { color: accentColor, fontWeight: "700" },
+            isSelected && { color: accentColor, fontWeight: "700" },
+          ]}
+        >
+          {WEEK_DAYS[dayIndex]}
+        </Text>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
       style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
       onPress={onPress}
     >
+      {isPeakDay && (
+        <View style={styles.peakIndicator}>
+          <Text style={styles.peakIndicatorText}>Peak</Text>
+        </View>
+      )}
       <View style={styles.barTrack}>
-        {val > 0 && (
-          <Text
-            style={[
-              styles.barValue,
-              { color: isToday ? accentColor : Colors.inkLight },
-            ]}
-          >
-            {val}
-          </Text>
-        )}
+        <Text
+          style={[
+            styles.barValue,
+            { color: isToday ? accentColor : Colors.inkLight },
+          ]}
+        >
+          {val}
+        </Text>
         <View
           style={{
             width: "70%",
             height: `${totalPct}%`,
             overflow: "hidden",
             borderRadius: 8,
+            opacity: barOpacity,
+            borderWidth: isLowActivity ? 1 : 0,
+            borderColor: Colors.gold + "99",
           }}
         >
           {day.bothCount > 0 && (
@@ -327,6 +363,7 @@ function BarDetailView({
   aapMin,
   aapMax,
   isPeakDay,
+  isLowActivity,
 }: {
   day: DailyStats;
   activeTab: Tab;
@@ -334,6 +371,7 @@ function BarDetailView({
   aapMin: number;
   aapMax: number;
   isPeakDay?: boolean;
+  isLowActivity?: boolean;
 }) {
   const dayName = formatDayName(day.date);
 
@@ -382,6 +420,14 @@ function BarDetailView({
     if (day.dirtyCount > 0) lines.push(`${day.dirtyCount} dirty`);
     if (day.bothCount > 0) lines.push(`${day.bothCount} both`);
     const detail = lines.length > 0 ? lines.join(" · ") : "No changes";
+    const flags: string[] = [];
+    if (isPeakDay) flags.push("Most changes this week");
+    if (day.dirtyCount === 0 && day.diaperCount > 0)
+      flags.push("No dirty diapers logged");
+    if (day.wetCount === 0 && day.diaperCount > 0)
+      flags.push("No wet diapers logged");
+    if (isLowActivity)
+      flags.push("Below expected minimum (6+ changes/day for newborns)");
     return (
       <View style={styles.barDetail}>
         <Text style={styles.barDetailMain}>
@@ -393,6 +439,13 @@ function BarDetailView({
             {detail} — {day.diaperCount} total
           </Text>
         </Text>
+        {flags.length > 0 && (
+          <Text
+            style={[styles.barDetailSub, { color: Colors.teal, fontWeight: "600" }]}
+          >
+            {flags.join(" · ")}
+          </Text>
+        )}
       </View>
     );
   }
@@ -471,34 +524,46 @@ export function InsightsChart({
   };
 
   const isFeeds = activeTab === "feeds";
+  const isDiapers = activeTab === "diapers";
   const feedWow = stats.weekOverWeek.feedsPctChange;
+  const diaperWow = stats.weekOverWeek.diapersPctChange;
   const avgFeeds = stats.avgFeeds;
+  const avgDiapers = stats.avgDiapers;
   const avgLinePct =
     isFeeds && maxVal > 0 && avgFeeds > 0
       ? Math.min(95, Math.max(5, (avgFeeds / maxVal) * 100))
-      : null;
-  const peakDayIndex = stats.feedInsights.peakDayIndex;
+      : isDiapers && maxVal > 0 && avgDiapers > 0
+        ? Math.min(95, Math.max(5, (avgDiapers / maxVal) * 100))
+        : null;
+  const avgLineLabel = isFeeds ? avgFeeds.toFixed(1) : avgDiapers.toFixed(1);
+  const peakDayIndex =
+    isFeeds
+      ? stats.feedInsights.peakDayIndex
+      : isDiapers
+        ? stats.diaperInsights.peakDayIndex
+        : null;
+  const wowForTab = isFeeds ? feedWow : isDiapers ? diaperWow : null;
 
   return (
     <View style={{ position: "relative" }}>
-      {isFeeds && feedWow != null && (
+      {(isFeeds || isDiapers) && wowForTab != null && (
         <View style={styles.trendArrowWrap}>
           <Text
             style={[
               styles.trendArrowText,
               {
                 color:
-                  feedWow > 0
+                  wowForTab > 0
                     ? Colors.teal
-                    : feedWow < 0
+                    : wowForTab < 0
                       ? Colors.dusk
                       : Colors.inkLight,
               },
             ]}
           >
-            {feedWow > 0 ? "↑" : feedWow < 0 ? "↓" : "→"}{" "}
-            {feedWow > 0 ? "+" : ""}
-            {feedWow}%
+            {wowForTab > 0 ? "↑" : wowForTab < 0 ? "↓" : "→"}{" "}
+            {wowForTab > 0 ? "+" : ""}
+            {wowForTab}%
           </Text>
           <Text style={[styles.trendArrowText, { color: Colors.inkLight, fontWeight: "500", fontSize: 10 }]}>
             vs last week
@@ -525,7 +590,7 @@ export function InsightsChart({
         {avgLinePct != null && (
           <View style={[styles.referenceLine, { bottom: `${avgLinePct}%` }]}>
             <Text style={styles.avgLineLabel}>
-              Avg {avgFeeds.toFixed(1)}
+              Avg {avgLineLabel}
             </Text>
             <View style={styles.avgLine} />
           </View>
@@ -556,6 +621,8 @@ export function InsightsChart({
           }
 
           if (activeTab === "diapers") {
+            const diaperPeak = stats.diaperInsights.peakDayIndex;
+            const diaperLow = stats.diaperInsights.lowActivityDayIndices;
             return (
               <DiaperBar
                 key={i}
@@ -568,6 +635,8 @@ export function InsightsChart({
                 onPress={() => handleBarPress(i)}
                 isSelected={selectedDayIndex === i}
                 isDimmed={isDimmed}
+                isPeakDay={diaperPeak === i}
+                isLowActivity={diaperLow.includes(i)}
               />
             );
           }
@@ -598,8 +667,16 @@ export function InsightsChart({
             aapMin={aapMin}
             aapMax={aapMax}
             isPeakDay={
-              activeTab === "feeds" &&
-              stats.feedInsights.peakDayIndex === selectedDayIndex
+              (activeTab === "feeds" &&
+                stats.feedInsights.peakDayIndex === selectedDayIndex) ||
+              (activeTab === "diapers" &&
+                stats.diaperInsights.peakDayIndex === selectedDayIndex)
+            }
+            isLowActivity={
+              activeTab === "diapers" &&
+              stats.diaperInsights.lowActivityDayIndices.includes(
+                selectedDayIndex,
+              )
             }
           />
         </Animated.View>

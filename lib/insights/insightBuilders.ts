@@ -4,6 +4,7 @@ import {
   FeedIcon,
   SleepIcon,
   StartTimerIcon,
+  DiaperIcon,
 } from "../../assets/icons/QuickActionIcons";
 import { formatDayName } from "./constants";
 import { hourRangeLabel } from "../useWeeklyStats";
@@ -299,7 +300,36 @@ export function buildSleepInsights(
   return cards;
 }
 
-export function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
+function getDiaperMinWetPerDay(baby: Baby | null): number {
+  if (!baby?.date_of_birth) return 6;
+  const dob = new Date(baby.date_of_birth);
+  const now = new Date();
+  const ageMonths =
+    (now.getFullYear() - dob.getFullYear()) * 12 +
+    (now.getMonth() - dob.getMonth());
+  if (ageMonths < 1) return 6;
+  if (ageMonths < 4) return 6;
+  if (ageMonths < 12) return 4;
+  return 3;
+}
+
+function getDiaperMinPerDay(baby: Baby | null): number {
+  if (!baby?.date_of_birth) return 6;
+  const dob = new Date(baby.date_of_birth);
+  const now = new Date();
+  const ageMonths =
+    (now.getFullYear() - dob.getFullYear()) * 12 +
+    (now.getMonth() - dob.getMonth());
+  if (ageMonths < 1) return 6;
+  if (ageMonths < 4) return 6;
+  if (ageMonths < 12) return 4;
+  return 3;
+}
+
+export function buildDiaperInsights(
+  stats: WeeklyStats,
+  baby: Baby | null,
+): InsightCard[] {
   const cards: InsightCard[] = [];
   const { diaperInsights } = stats;
 
@@ -307,61 +337,186 @@ export function buildDiaperInsights(stats: WeeklyStats): InsightCard[] {
   const hasDirty = diaperInsights.dirtyTotal > 0;
   const hasBoth = diaperInsights.bothTotal > 0;
 
-  if (hasWet || hasDirty || hasBoth) {
-    const parts: string[] = [];
-    if (hasWet) parts.push(`${diaperInsights.wetTotal} wet`);
-    if (hasDirty) parts.push(`${diaperInsights.dirtyTotal} dirty`);
-    if (hasBoth) parts.push(`${diaperInsights.bothTotal} both`);
-    cards.push({
-      icon: "🧷",
-      title: "Wet, Dirty & Both",
-      text: `${parts.join(", ")} — ${stats.totalDiapers} total changes this week.`,
-      color: Colors.moss,
-    });
-  }
-
-  if (stats.totalDiapers > 0) {
-    const pctParts: string[] = [];
-    if (diaperInsights.wetPct > 0)
-      pctParts.push(`${diaperInsights.wetPct}% wet`);
-    if (diaperInsights.dirtyPct > 0)
-      pctParts.push(`${diaperInsights.dirtyPct}% dirty`);
-    if (diaperInsights.bothPct > 0)
-      pctParts.push(`${diaperInsights.bothPct}% both`);
-    if (pctParts.length > 0) {
-      cards.push({
-        icon: "📊",
-        title: "Type breakdown",
-        text: `${pctParts.join(", ")} of all changes.`,
-        color: Colors.teal,
-      });
-    }
-  }
-
-  if (diaperInsights.peakHour != null) {
-    cards.push({
-      icon: "🕐",
-      title: "Peak change time",
-      text: `Most changes happen around ${hourRangeLabel(diaperInsights.peakHour)}.`,
-      color: Colors.dusk,
-    });
-  }
-
-  if (stats.avgDiapers > 0) {
-    cards.push({
-      icon: "📈",
-      title: "Daily average",
-      text: `Averaging ${stats.avgDiapers} change${stats.avgDiapers === 1 ? "" : "s"} per day.`,
-      color: Colors.sky,
-    });
-  }
-
-  if (cards.length === 0) {
+  if (stats.totalDiapers === 0) {
     cards.push({
       icon: "📝",
       title: "No diaper data yet",
       text: "Start logging diapers to see patterns here.",
       color: Colors.inkLight,
+    });
+    return cards;
+  }
+
+  // 1. Type Breakdown — X wet, Y dirty, Z both — N total with % split
+  const parts: string[] = [];
+  if (hasWet) parts.push(`${diaperInsights.wetTotal} wet`);
+  if (hasDirty) parts.push(`${diaperInsights.dirtyTotal} dirty`);
+  if (hasBoth) parts.push(`${diaperInsights.bothTotal} both`);
+  const pctParts: string[] = [];
+  if (diaperInsights.wetPct > 0)
+    pctParts.push(`${diaperInsights.wetPct}% wet`);
+  if (diaperInsights.dirtyPct > 0)
+    pctParts.push(`${diaperInsights.dirtyPct}% dirty`);
+  if (diaperInsights.bothPct > 0)
+    pctParts.push(`${diaperInsights.bothPct}% both`);
+  cards.push({
+    icon: "🧷",
+    title: "Type Breakdown",
+    text: `${parts.join(", ")} — ${stats.totalDiapers} total changes this week. ${pctParts.length > 0 ? `(${pctParts.join(", ")} of all changes)` : ""}`,
+    color: Colors.moss,
+    IconComponent: DiaperIcon,
+  });
+
+  // 2. Daily Change Frequency
+  const minPerDay = getDiaperMinPerDay(baby);
+  const peakDayName =
+    diaperInsights.peakDayIndex != null
+      ? formatDayName(stats.days[diaperInsights.peakDayIndex].date)
+      : null;
+  const leastDayName =
+    diaperInsights.leastActiveDayIndex != null
+      ? formatDayName(stats.days[diaperInsights.leastActiveDayIndex].date)
+      : null;
+  const peakCount =
+    diaperInsights.peakDayIndex != null
+      ? stats.days[diaperInsights.peakDayIndex].diaperCount
+      : 0;
+  const leastCount =
+    diaperInsights.leastActiveDayIndex != null
+      ? stats.days[diaperInsights.leastActiveDayIndex].diaperCount
+      : 0;
+  const belowMinDays = diaperInsights.lowActivityDayIndices.length;
+  let freqText = `Average ${stats.avgDiapers} diaper changes per day this week.`;
+  if (peakDayName && leastDayName && peakDayName !== leastDayName) {
+    freqText += ` Most active: ${peakDayName} (${peakCount}), least: ${leastDayName} (${leastCount}).`;
+  }
+  if (belowMinDays > 0) {
+    freqText += ` ${belowMinDays} day${belowMinDays === 1 ? "" : "s"} below age-recommended minimum (${minPerDay}+ changes/day).`;
+  }
+  cards.push({
+    icon: "📈",
+    title: "Daily Change Frequency",
+    text: freqText,
+    color: Colors.teal,
+  });
+
+  // 3. Wet Diaper Hydration Indicator
+  const minWetPerDay = getDiaperMinWetPerDay(baby);
+  const lowWetDays = diaperInsights.lowWetDayIndices.length;
+  const hydrationText =
+    lowWetDays === 0
+      ? "Hydration looks good this week — wet diaper counts meet expected levels."
+      : `${lowWetDays} day${lowWetDays === 1 ? "" : "s"} this week had fewer wet diapers than expected (${minWetPerDay}+/day for age).`;
+  cards.push({
+    icon: "💧",
+    title: "Wet Diaper Hydration Indicator",
+    text: hydrationText,
+    color: lowWetDays === 0 ? Colors.teal : Colors.gold,
+  });
+
+  // 4. Stool Pattern Tracker — no consistency/color data exists, encourage logging
+  const dirtyDays = stats.days.filter((d) => d.dirtyCount > 0).length;
+  const consecutiveNoDirty = (() => {
+    let max = 0;
+    let curr = 0;
+    for (const d of stats.days) {
+      if (d.dirtyCount === 0) curr++;
+      else {
+        max = Math.max(max, curr);
+        curr = 0;
+      }
+    }
+    return Math.max(max, curr);
+  })();
+  let stoolText = "";
+  if (hasDirty) {
+    stoolText = `${diaperInsights.dirtyTotal} dirty diapers across ${dirtyDays} day${dirtyDays === 1 ? "" : "s"} this week.`;
+    if (consecutiveNoDirty >= 2) {
+      stoolText += ` Up to ${consecutiveNoDirty} consecutive days without a dirty diaper.`;
+    }
+  }
+  stoolText += " Log consistency and color when recording diapers for richer insights.";
+  cards.push({
+    icon: "💩",
+    title: "Stool Pattern Tracker",
+    text: stoolText,
+    color: Colors.dusk,
+  });
+
+  // 5. Change Timing Pattern
+  if (diaperInsights.peakHour != null) {
+    const gapParts: string[] = [];
+    if (diaperInsights.avgGapMin != null) {
+      gapParts.push(`Average ~${diaperInsights.avgGapMin} min between changes`);
+    }
+    if (
+      diaperInsights.maxGapMin != null &&
+      diaperInsights.maxGapMin > 240
+    ) {
+      const hrs = Math.floor(diaperInsights.maxGapMin / 60);
+      gapParts.push(`longest gap ${hrs}h — may exceed age-typical expectations`);
+    }
+    const timingText =
+      gapParts.length > 0
+        ? `Most changes happen between ${hourRangeLabel(diaperInsights.peakHour)}. ${gapParts.join(". ")}.`
+        : `Most changes happen between ${hourRangeLabel(diaperInsights.peakHour)}.`;
+    cards.push({
+      icon: "🕐",
+      title: "Change Timing Pattern",
+      text: timingText,
+      color: Colors.sky,
+    });
+  } else if (stats.totalDiapers > 0) {
+    cards.push({
+      icon: "🕐",
+      title: "Change Timing Pattern",
+      text: "Keep logging to identify the most common windows for diaper changes.",
+      color: Colors.sky,
+    });
+  }
+
+  // 6. Week-over-Week Comparison
+  const prevTotal =
+    diaperInsights.prevWetTotal +
+    diaperInsights.prevDirtyTotal +
+    diaperInsights.prevBothTotal;
+  if (prevTotal > 0) {
+    const wetDir =
+      diaperInsights.wetTotal > diaperInsights.prevWetTotal
+        ? "↑"
+        : diaperInsights.wetTotal < diaperInsights.prevWetTotal
+          ? "↓"
+          : "→";
+    const dirtyDir =
+      diaperInsights.dirtyTotal > diaperInsights.prevDirtyTotal
+        ? "↑"
+        : diaperInsights.dirtyTotal < diaperInsights.prevDirtyTotal
+          ? "↓"
+          : "→";
+    const bothDir =
+      diaperInsights.bothTotal > diaperInsights.prevBothTotal
+        ? "↑"
+        : diaperInsights.bothTotal < diaperInsights.prevBothTotal
+          ? "↓"
+          : "→";
+    let wowText = `Wet ${wetDir} · Dirty ${dirtyDir} · Both ${bothDir} vs last week.`;
+    if (diaperInsights.wetVsDirtyShift === "more_wet") {
+      wowText += " More wet diapers relative to dirty this week.";
+    } else if (diaperInsights.wetVsDirtyShift === "more_dirty") {
+      wowText += " More dirty diapers relative to wet this week.";
+    }
+    cards.push({
+      icon: "📊",
+      title: "Week-over-Week Comparison",
+      text: wowText,
+      color: Colors.lav,
+    });
+  } else {
+    cards.push({
+      icon: "📊",
+      title: "Week-over-Week Comparison",
+      text: "First week of data — compare against next week for trends.",
+      color: Colors.lav,
     });
   }
 

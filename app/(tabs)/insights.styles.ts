@@ -280,6 +280,14 @@ export const styles = StyleSheet.create({
     color: Colors.inkLight,
     fontWeight: "500",
   },
+  wetDirtyShiftNote: {
+    fontFamily: "DM-Sans",
+    fontSize: 10,
+    color: Colors.inkLight,
+    marginTop: 8,
+    fontStyle: "italic",
+    textAlign: "center",
+  },
   sectionLabel: {
     fontFamily: "DM-Sans",
     fontSize: 11,

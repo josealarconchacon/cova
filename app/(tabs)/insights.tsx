@@ -76,6 +76,17 @@ export default function InsightsScreen() {
           totalDiapers={stats.totalDiapers}
           totalSleepHours={stats.totalSleepHours}
         />
+
+        {activeTab === "diapers" &&
+          stats.totalDiapers > 0 &&
+          stats.diaperInsights.wetVsDirtyShift != null &&
+          stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
+            <Text style={styles.wetDirtyShiftNote}>
+              {stats.diaperInsights.wetVsDirtyShift === "more_wet"
+                ? "Wet/dirty ratio shifted toward more wet this week"
+                : "Wet/dirty ratio shifted toward more dirty this week"}
+            </Text>
+          )}
       </View>
 
       <Text style={styles.sectionLabel}>Patterns</Text>

@@ -116,7 +116,7 @@ export function useInsights(): UseInsightsResult {
     (): Record<Tab, InsightCard[]> => ({
       feeds: buildFeedInsights(stats),
       sleep: buildSleepInsights(stats, activeBaby ?? null),
-      diapers: buildDiaperInsights(stats),
+      diapers: buildDiaperInsights(stats, activeBaby ?? null),
     }),
     [stats, activeBaby],
   );

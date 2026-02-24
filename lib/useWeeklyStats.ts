@@ -59,6 +59,16 @@ export interface DiaperInsights {
   dirtyPct: number;
   bothPct: number;
   peakHour: number | null;
+  peakDayIndex: number | null;
+  leastActiveDayIndex: number | null;
+  lowActivityDayIndices: number[];
+  lowWetDayIndices: number[];
+  wetVsDirtyShift: "more_wet" | "more_dirty" | "balanced" | null;
+  prevWetTotal: number;
+  prevDirtyTotal: number;
+  prevBothTotal: number;
+  avgGapMin: number | null;
+  maxGapMin: number | null;
 }
 
 export interface WeekOverWeek {
@@ -377,6 +387,7 @@ export function useWeeklyStats(
 
     // ── Diaper insights ──
     const diaperLogs = currentWeekLogs.filter((l) => l.type === "diaper");
+    const prevDiaperLogs = previousWeekLogs.filter((l) => l.type === "diaper");
     let wetTotal = 0;
     let dirtyTotal = 0;
     let bothTotal = 0;
@@ -386,10 +397,84 @@ export function useWeeklyStats(
       else if (dt === "dirty") dirtyTotal++;
       else wetTotal++;
     }
+    let prevWetTotal = 0;
+    let prevDirtyTotal = 0;
+    let prevBothTotal = 0;
+    for (const log of prevDiaperLogs) {
+      const dt = (log.metadata?.diaper_type as string) ?? "";
+      if (dt === "both") prevBothTotal++;
+      else if (dt === "dirty") prevDirtyTotal++;
+      else prevWetTotal++;
+    }
     const diaperTotal = diaperLogs.length || 1;
     const wetPct = Math.round((wetTotal / diaperTotal) * 100);
     const dirtyPct = Math.round((dirtyTotal / diaperTotal) * 100);
     const bothPct = Math.round((bothTotal / diaperTotal) * 100);
+
+    const AAP_MIN_DIAPERS_PER_DAY = 6;
+    const AAP_MIN_WET_PER_DAY = 6;
+    let diaperPeakDayIndex: number | null = null;
+    let diaperLeastActiveDayIndex: number | null = null;
+    const lowActivityDayIndices: number[] = [];
+    const lowWetDayIndices: number[] = [];
+    let maxDiapers = 0;
+    let minDiapers = Infinity;
+    days.forEach((d, i) => {
+      if (d.diaperCount > maxDiapers) {
+        maxDiapers = d.diaperCount;
+        diaperPeakDayIndex = i;
+      }
+      if (d.diaperCount < minDiapers) {
+        minDiapers = d.diaperCount;
+        diaperLeastActiveDayIndex = i;
+      }
+      if (d.diaperCount > 0 && d.diaperCount < AAP_MIN_DIAPERS_PER_DAY) {
+        lowActivityDayIndices.push(i);
+      }
+      if (d.diaperCount > 0 && d.wetCount < AAP_MIN_WET_PER_DAY) {
+        lowWetDayIndices.push(i);
+      }
+    });
+    if (totalDiapers === 0) {
+      diaperPeakDayIndex = null;
+      diaperLeastActiveDayIndex = null;
+    }
+
+    let wetVsDirtyShift: DiaperInsights["wetVsDirtyShift"] = null;
+    const prevDiaperTotal = prevWetTotal + prevDirtyTotal + prevBothTotal || 1;
+    const currWetPct = diaperTotal > 0 ? wetTotal / diaperTotal : 0.5;
+    const currDirtyPct = diaperTotal > 0 ? dirtyTotal / diaperTotal : 0.5;
+    const prevWetPct = prevWetTotal / prevDiaperTotal;
+    const prevDirtyPct = prevDirtyTotal / prevDiaperTotal;
+    if (diaperTotal > 0 && prevDiaperTotal > 0) {
+      const wetShift = currWetPct - prevWetPct;
+      const dirtyShift = currDirtyPct - prevDirtyPct;
+      if (wetShift > 0.1) wetVsDirtyShift = "more_wet";
+      else if (dirtyShift > 0.1) wetVsDirtyShift = "more_dirty";
+      else wetVsDirtyShift = "balanced";
+    }
+
+    let diaperAvgGapMin: number | null = null;
+    let diaperMaxGapMin: number | null = null;
+    if (diaperLogs.length >= 2) {
+      const sorted = [...diaperLogs].sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      );
+      const gaps: number[] = [];
+      for (let i = 1; i < sorted.length; i++) {
+        const prevTime = new Date(sorted[i - 1].started_at).getTime();
+        const nextTime = new Date(sorted[i].started_at).getTime();
+        const gapMin = (nextTime - prevTime) / 60000;
+        if (gapMin > 0 && gapMin < 24 * 60) gaps.push(gapMin);
+      }
+      if (gaps.length > 0) {
+        diaperMaxGapMin = Math.round(Math.max(...gaps));
+        diaperAvgGapMin = Math.round(
+          gaps.reduce((a, b) => a + b, 0) / gaps.length,
+        );
+      }
+    }
 
     // ── Week-over-week ──
     const prevFeeds = previousWeekLogs.filter((l) => l.type === "feed").length;
@@ -452,6 +537,16 @@ export function useWeeklyStats(
         dirtyPct,
         bothPct,
         peakHour: computePeakHour(currentWeekLogs, "diaper"),
+        peakDayIndex: diaperPeakDayIndex,
+        leastActiveDayIndex: diaperLeastActiveDayIndex,
+        lowActivityDayIndices,
+        lowWetDayIndices,
+        wetVsDirtyShift,
+        prevWetTotal,
+        prevDirtyTotal,
+        prevBothTotal,
+        avgGapMin: diaperAvgGapMin,
+        maxGapMin: diaperMaxGapMin,
       },
       weekOverWeek: {
         feedsPctChange: pctChange(totalFeeds, prevFeeds),
