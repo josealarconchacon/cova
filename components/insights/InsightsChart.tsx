@@ -3,11 +3,12 @@ import { View, Text, Pressable, Animated } from "react-native";
 import { Colors } from "../../constants/theme";
 import { styles } from "../../app/(tabs)/insights.styles";
 import {
-  WEEK_DAYS,
   DIAPER_COLORS,
   SLEEP_COLORS,
   formatDayName,
 } from "../../lib/insights";
+import { getDayLetter } from "../../lib/insights/formatUtils";
+import { toLocalDateKey } from "../../lib/home/dateUtils";
 import type { Tab } from "../../lib/insights";
 import type { DailyStats, WeeklyStats } from "../../lib/useWeeklyStats";
 
@@ -68,7 +69,7 @@ function FeedBar({
             isSelected && { color: accentColor, fontWeight: "700" },
           ]}
         >
-          {WEEK_DAYS[dayIndex]}
+          {getDayLetter(day.date)}
         </Text>
       </Pressable>
     );
@@ -128,7 +129,7 @@ function FeedBar({
           isSelected && { color: accentColor, fontWeight: "700" },
         ]}
       >
-        {WEEK_DAYS[dayIndex]}
+        {getDayLetter(day.date)}
       </Text>
     </Pressable>
   );
@@ -186,7 +187,7 @@ function DiaperBar({
             isSelected && { color: accentColor, fontWeight: "700" },
           ]}
         >
-          {WEEK_DAYS[dayIndex]}
+          {getDayLetter(day.date)}
         </Text>
       </Pressable>
     );
@@ -261,7 +262,7 @@ function DiaperBar({
           isSelected && { color: accentColor, fontWeight: "700" },
         ]}
       >
-        {WEEK_DAYS[dayIndex]}
+        {getDayLetter(day.date)}
       </Text>
     </Pressable>
   );
@@ -350,7 +351,7 @@ function SleepBar({
           isSelected && { color: accentColor, fontWeight: "700" },
         ]}
       >
-        {WEEK_DAYS[dayIndex]}
+        {getDayLetter(day.date)}
       </Text>
     </Pressable>
   );
@@ -543,6 +544,7 @@ export function InsightsChart({
         ? stats.diaperInsights.peakDayIndex
         : null;
   const wowForTab = isFeeds ? feedWow : isDiapers ? diaperWow : null;
+  const todayStr = toLocalDateKey(new Date());
 
   return (
     <View style={{ position: "relative" }}>
@@ -597,8 +599,8 @@ export function InsightsChart({
         )}
         <View style={styles.barsRow}>
         {chartData.map((val: number, i: number) => {
-          const isToday = i === 6;
           const day = stats.days[i];
+          const isToday = day.date === todayStr;
           const isDimmed =
             selectedDayIndex != null && selectedDayIndex !== i;
 

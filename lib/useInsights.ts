@@ -15,7 +15,7 @@ import {
   type InsightCard,
   type Tab,
 } from "./insights";
-import { formatWeekRange } from "./insights/formatUtils";
+import { formatWeekRangeSunSat } from "./insights/formatUtils";
 import type { Log } from "../types";
 
 export interface StatItem {
@@ -36,16 +36,19 @@ export interface UseInsightsResult {
   setActiveTab: (tab: Tab) => void;
 }
 
-const CURRENT_WEEK_DAYS = 7;
-
 export function useInsights(): UseInsightsResult {
   const { profile, activeBaby } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>("feeds");
 
-  const sevenDaysAgo = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d;
+  const weekBounds = useMemo(() => {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    return { weekStart, weekEnd };
   }, []);
 
   const fourteenDaysAgo = useMemo(() => {
@@ -83,12 +86,13 @@ export function useInsights(): UseInsightsResult {
     queryKey: insightsQueryKey,
   });
 
-  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+  const weekStartISO = weekBounds.weekStart.toISOString();
+  const weekEndISO = weekBounds.weekEnd.toISOString();
   const currentWeekLogs = allLogs.filter(
-    (l) => l.started_at >= sevenDaysAgoISO,
+    (l) => l.started_at >= weekStartISO && l.started_at <= weekEndISO,
   );
   const previousWeekLogs = allLogs.filter(
-    (l) => l.started_at < sevenDaysAgoISO,
+    (l) => l.started_at < weekStartISO,
   );
 
   const stats = useWeeklyStats(currentWeekLogs, previousWeekLogs);
@@ -121,7 +125,7 @@ export function useInsights(): UseInsightsResult {
     [stats, activeBaby],
   );
 
-  const weekRange = formatWeekRange(CURRENT_WEEK_DAYS);
+  const weekRange = formatWeekRangeSunSat();
 
   const wowChange =
     activeTab === "feeds"

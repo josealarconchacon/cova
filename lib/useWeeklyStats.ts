@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Log } from "../types";
+import { toLocalDateKey } from "./home/dateUtils";
 
 export interface DailyStats {
   date: string; // YYYY-MM-DD
@@ -123,11 +124,15 @@ export function useWeeklyStats(
   previousWeekLogs: Log[] = [],
 ): WeeklyStats {
   return useMemo(() => {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setHours(0, 0, 0, 0);
     const days: DailyStats[] = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
       return {
-        date: d.toISOString().split("T")[0],
+        date: toLocalDateKey(d),
         feedCount: 0,
         nursingCount: 0,
         bottleCount: 0,
@@ -144,7 +149,7 @@ export function useWeeklyStats(
     });
 
     for (const log of currentWeekLogs) {
-      const logDate = log.started_at.split("T")[0];
+      const logDate = toLocalDateKey(new Date(log.started_at));
       const day = days.find((d) => d.date === logDate);
       if (!day) continue;
       if (log.type === "feed") {

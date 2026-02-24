@@ -58,11 +58,12 @@ export const styles = StyleSheet.create({
   statStrip: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 24,
   },
   statItem: {
     flex: 1,
     alignItems: "center",
+    minHeight: 52,
   },
   statValue: {
     fontFamily: "Cormorant-Garamond",
@@ -94,6 +95,7 @@ export const styles = StyleSheet.create({
   chartArea: {
     position: "relative",
     height: 170,
+    paddingTop: 20,
   },
   gridLine: {
     position: "absolute",
@@ -156,10 +158,10 @@ export const styles = StyleSheet.create({
   },
   peakIndicator: {
     position: "absolute",
-    top: -14,
+    top: -18,
     alignSelf: "center",
-    width: 20,
-    height: 14,
+    minWidth: 28,
+    height: 16,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -190,6 +192,7 @@ export const styles = StyleSheet.create({
     gap: 8,
     alignItems: "flex-end",
     flex: 1,
+    marginLeft: 44,
   },
   barWrap: {
     flex: 1,
@@ -215,13 +218,13 @@ export const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontSize: 10,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   dayLabel: {
     fontFamily: "DM-Sans",
     fontSize: 11,
     color: Colors.inkLight,
-    marginTop: 8,
+    marginTop: 10,
     fontWeight: "500",
   },
 
@@ -254,7 +257,7 @@ export const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontSize: 11,
     color: Colors.inkLight,
-    marginTop: 12,
+    marginTop: 18,
     textAlign: "center",
   },
 
