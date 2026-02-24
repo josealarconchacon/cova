@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,8 @@ import {
   OtherLiquidIcon,
   StartTimerIcon,
   LogPastSleepIcon,
+  NippleLeftIcon,
+  NippleRightIcon,
 } from "../../assets/icons/QuickActionIcons";
 import {
   WetIcon,
@@ -76,7 +78,11 @@ export interface SleepLogData {
 
 interface Props {
   activeTimerType: string | null;
-  onTimerAction: (type: "feed" | "sleep", startedAt?: string) => void;
+  onTimerAction: (
+    type: "feed" | "sleep",
+    startedAt?: string,
+    nursingSide?: NursingSideValue,
+  ) => void;
   onInstantLog: (
     type: "diaper" | "health" | "milestone",
     note: string,
@@ -159,8 +165,8 @@ export function QuickActions({
       {modal === "feed" && (
         <FeedModal
           onClose={() => setModal(null)}
-          onStartNursing={(startedAt) => {
-            onTimerAction("feed", startedAt);
+          onStartNursing={(startedAt, side) => {
+            onTimerAction("feed", startedAt, side);
             setModal(null);
           }}
           onSaveBottle={(data) => {
@@ -317,9 +323,11 @@ function AmountSlider({ value, min, max, step, color, onChange }: SliderProps) {
 
 // ── Feed modal ────────────────────────────────────────────────────────────────
 
+export type NursingSideValue = "left" | "right";
+
 interface FeedModalProps {
   onClose: () => void;
-  onStartNursing: (startedAt: string) => void;
+  onStartNursing: (startedAt: string, side: NursingSideValue) => void;
   onSaveBottle: (data: BottleFeedData) => void;
 }
 
@@ -329,6 +337,16 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
 
   // Nursing state
   const [nursingStart, setNursingStart] = useState(now);
+  const [nursingSide, setNursingSide] = useState<NursingSideValue | null>(null);
+  const [showSideValidation, setShowSideValidation] = useState(false);
+
+  // Reset side when switching from Bottle back to Nursing
+  useEffect(() => {
+    if (tab === "nursing") {
+      setNursingSide(null);
+      setShowSideValidation(false);
+    }
+  }, [tab]);
 
   // Bottle state
   const [milkType, setMilkType] = useState<
@@ -342,7 +360,12 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
 
   // ── Nursing ──
   const handleStartNursing = () => {
-    onStartNursing(nursingStart.toISOString());
+    if (!nursingSide) {
+      setShowSideValidation(true);
+      return;
+    }
+    setShowSideValidation(false);
+    onStartNursing(nursingStart.toISOString(), nursingSide);
   };
 
   // ── Bottle / slider ──
@@ -437,6 +460,53 @@ function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
             {/* ── Nursing pane ── */}
             {tab === "nursing" && (
               <View>
+                <Text style={fs.label}>NURSING SIDE</Text>
+                {!nursingSide && (
+                  <Text style={fs.sideHint}>Tap to select which side you're nursing on</Text>
+                )}
+                <View style={fs.sideRow}>
+                  {(["left", "right"] as const).map((s) => {
+                    const isActive = nursingSide === s;
+                    const Icon = s === "left" ? NippleLeftIcon : NippleRightIcon;
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        style={[
+                          fs.sideBtn,
+                          isActive && fs.sideBtnActive,
+                          isActive && fs.sideBtnActiveShadow,
+                        ]}
+                        onPress={() => {
+                          setNursingSide(s);
+                          setShowSideValidation(false);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={fs.sideBtnIconWrap}>
+                          <Icon size={32} />
+                          {isActive && (
+                            <View style={fs.sideBtnCheck}>
+                              <Text style={fs.sideBtnCheckText}>✓</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            fs.sideBtnText,
+                            isActive && fs.sideBtnTextActive,
+                          ]}
+                        >
+                          {s === "left" ? "Left" : "Right"}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {showSideValidation && (
+                  <Text style={fs.validationText}>
+                    Please select a side to continue
+                  </Text>
+                )}
                 <TimePickerField
                   label="Start time"
                   value={nursingStart}
@@ -1405,6 +1475,76 @@ const fs = StyleSheet.create({
     color: Colors.inkLight,
     textAlign: "center",
     marginBottom: 20,
+  },
+  sideHint: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.inkLight,
+    marginBottom: 10,
+  },
+  sideRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 8,
+  },
+  sideBtn: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: Colors.sandDark,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.cream,
+    minHeight: 100,
+  },
+  sideBtnIconWrap: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  sideBtnCheck: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.dusk,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideBtnCheckText: {
+    color: "white",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  sideBtnActive: {
+    borderColor: Colors.dusk,
+    borderWidth: 2.5,
+    backgroundColor: "#F8EDE9",
+  },
+  sideBtnActiveShadow: {
+    shadowColor: Colors.dusk,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  sideBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 14,
+    color: Colors.inkLight,
+  },
+  sideBtnTextActive: {
+    color: Colors.dusk,
+  },
+  validationText: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.dusk,
+    marginBottom: 12,
   },
   timeInput: {
     backgroundColor: Colors.sand,

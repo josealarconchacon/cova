@@ -17,6 +17,8 @@ export interface InsightCard {
   text: string;
   color: string;
   IconComponent?: React.ComponentType<{ size?: number; color?: string }>;
+  /** Optional balance bar for Nursing Side Balance */
+  balanceBar?: { leftPct: number; rightPct: number };
 }
 
 const IRREGULAR_GAP_THRESHOLD_MIN = 300;
@@ -90,12 +92,46 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
     color: Colors.teal,
   });
 
-  cards.push({
-    icon: "⚖️",
-    title: "Nursing Side Balance",
-    text: "Log nursing side (left/right) when recording feeds to see balance and flag any imbalance over 60/40.",
-    color: Colors.inkLight,
-  });
+  // Nursing Side Balance — show real data when side records exist
+  const {
+    nursingWithSideTotal,
+    nursingLeftPct,
+    nursingRightPct,
+    nursingWithoutSideCount,
+  } = feedInsights;
+
+  if (nursingWithSideTotal > 0) {
+    const imbalanceThreshold = 60;
+    const isImbalanced =
+      nursingLeftPct >= imbalanceThreshold ||
+      nursingRightPct >= imbalanceThreshold;
+    const imbalancedSide =
+      nursingLeftPct >= imbalanceThreshold ? "left" : "right";
+    const lessUsedSide = nursingLeftPct >= imbalanceThreshold ? "right" : "left";
+
+    let balanceText = `Left ${nursingLeftPct}% · Right ${nursingRightPct}%`;
+    if (nursingWithoutSideCount > 0) {
+      balanceText += ` — ${nursingWithSideTotal} of ${nursingWithSideTotal + nursingWithoutSideCount} sessions this week have side data`;
+    }
+    if (isImbalanced) {
+      balanceText += `. ⚠️ Imbalance detected — consider starting more feeds on the ${lessUsedSide} side this week`;
+    }
+
+    cards.push({
+      icon: "⚖️",
+      title: "Nursing Side Balance",
+      text: balanceText,
+      color: isImbalanced ? Colors.gold : Colors.dusk,
+      balanceBar: { leftPct: nursingLeftPct, rightPct: nursingRightPct },
+    });
+  } else if (hasNursing) {
+    cards.push({
+      icon: "⚖️",
+      title: "Nursing Side Balance",
+      text: "Log nursing side (left/right) when recording feeds to see balance and flag any imbalance over 60/40.",
+      color: Colors.inkLight,
+    });
+  }
 
   if (hasBottle && feedInsights.bottleAvgMl > 0) {
     const prev = feedInsights.prevBottleAvgMl;

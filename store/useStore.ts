@@ -6,6 +6,11 @@ interface ActiveLog {
   type: "feed" | "sleep";
   started_at: string;
   baby_id: string;
+  /** Nursing side when type is "feed" — used for timer display */
+  side?: "left" | "right";
+  /** Left/right durations when nursing with side switching */
+  leftDuration?: number;
+  rightDuration?: number;
 }
 
 interface CovaStore {

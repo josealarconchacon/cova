@@ -207,6 +207,10 @@ export function TimelineItem({
     feedType === "bottle"  ? "Bottle Feed" :
     cfg.label;
 
+  const nursingSide = feedType === "nursing"
+    ? (log.metadata?.side as "left" | "right" | undefined)
+    : undefined;
+
   const bottleAmountMl = feedType === "bottle"
     ? (log.metadata?.amount_ml as number | undefined)
     : undefined;
@@ -334,6 +338,15 @@ export function TimelineItem({
                 <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
                   <Text style={[styles.badgeText, { color: cfg.color }]}>
                     {formatDuration(log.duration_seconds)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Nursing side badge (L/R) */}
+              {nursingSide && (
+                <View style={[styles.badge, { backgroundColor: cfg.color + "22" }]}>
+                  <Text style={[styles.badgeText, { color: cfg.color }]}>
+                    {nursingSide === "left" ? "L" : "R"}
                   </Text>
                 </View>
               )}

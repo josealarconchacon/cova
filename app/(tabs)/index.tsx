@@ -42,6 +42,7 @@ export default function HomeScreen() {
     scrollRef,
     startTimer,
     stopTimer,
+    switchNursingSide,
     logBottleFeed,
     logSleep,
     logInstant,
@@ -96,7 +97,17 @@ export default function HomeScreen() {
       >
         <SummaryCards logs={todayLogs} />
 
-        {activeLog && <TimerBar activeLog={activeLog} onStop={stopTimer} />}
+        {activeLog && (
+          <TimerBar
+            activeLog={activeLog}
+            onStop={stopTimer}
+            onSwitchSide={
+              activeLog.type === "feed" && activeLog.side
+                ? switchNursingSide
+                : undefined
+            }
+          />
+        )}
 
         <QuickActions
           activeTimerType={activeLog?.type ?? null}

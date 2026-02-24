@@ -28,6 +28,28 @@ export function InsightCard({ item }: InsightCardProps) {
         <Text style={styles.insightTitle}>{item.title}</Text>
       </View>
       <Text style={styles.insightText}>{item.text}</Text>
+      {item.balanceBar && (
+        <View style={styles.balanceBarTrack}>
+          <View
+            style={[
+              styles.balanceBarLeft,
+              {
+                flex: item.balanceBar.leftPct / 100,
+                backgroundColor: item.color + "40",
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.balanceBarRight,
+              {
+                flex: item.balanceBar.rightPct / 100,
+                backgroundColor: item.color + "80",
+              },
+            ]}
+          />
+        </View>
+      )}
     </View>
   );
 }

@@ -6,6 +6,10 @@ import Svg, {
   Ellipse,
   Line,
   Text as SvgText,
+  Defs,
+  LinearGradient,
+  RadialGradient,
+  Stop,
 } from "react-native-svg";
 
 interface IconProps {
@@ -505,6 +509,108 @@ export function LogPastSleepIcon({ size = 24, color = "#5A8FC9" }: IconProps) {
       <Rect x="57" y="42" width="10" height="5" rx="2" fill={color} opacity={0.3} transform="rotate(-40 57 42)" />
       {/* Pencil shine */}
       <Rect x="60" y="48" width="2.5" height="20" rx="1.2" fill="white" opacity={0.25} transform="rotate(-40 60 48)" />
+    </Svg>
+  );
+}
+
+/** Nursing side — left breast (exact icon from icon-nipple-left.svg) */
+export function NippleLeftIcon({ size = 24 }: IconProps) {
+  const id = "nipL";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 88 88" fill="none">
+      <Defs>
+        <LinearGradient id={`${id}-bg`} x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FFF5F0" />
+          <Stop offset="1" stopColor="#FFE8DC" />
+        </LinearGradient>
+        <LinearGradient id={`${id}-body`} x1="0" y1="20" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FDDCB8" />
+          <Stop offset="1" stopColor="#F0B880" />
+        </LinearGradient>
+        <LinearGradient id={`${id}-breast`} x1="10" y1="30" x2="70" y2="80" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FDE8C8" />
+          <Stop offset="1" stopColor="#F5C890" />
+        </LinearGradient>
+        <RadialGradient id={`${id}-areola`} cx="42%" cy="40%" r="55%" gradientUnits="objectBoundingBox">
+          <Stop offset="0" stopColor="#E8A878" />
+          <Stop offset="1" stopColor="#C87848" />
+        </RadialGradient>
+        <RadialGradient id={`${id}-nipple`} cx="40%" cy="38%" r="55%" gradientUnits="objectBoundingBox">
+          <Stop offset="0" stopColor="#D08858" />
+          <Stop offset="1" stopColor="#A85C30" />
+        </RadialGradient>
+      </Defs>
+      <Rect width="88" height="88" rx="20" fill={`url(#${id}-bg)`} />
+      <Path d="M4 88 L4 52 C4 40 12 32 24 30 L44 28 L64 30 C76 32 84 40 84 52 L84 88 Z" fill={`url(#${id}-body)`} />
+      <Ellipse cx="36" cy="62" rx="30" ry="26" fill={`url(#${id}-breast)`} />
+      <Ellipse cx="36" cy="64" rx="28" ry="22" fill="rgba(200,120,60,0.08)" />
+      <Ellipse cx="28" cy="54" rx="10" ry="7" fill="white" opacity={0.2} transform="rotate(-20 28 54)" />
+      <Circle cx="34" cy="62" r="13" fill={`url(#${id}-areola)`} />
+      <Circle cx="34" cy="62" r="13" fill="none" stroke="rgba(180,90,40,0.15)" strokeWidth={2} />
+      <Circle cx="34" cy="62" r="10" fill="none" stroke="rgba(180,90,40,0.1)" strokeWidth={1} />
+      <Circle cx="24" cy="58" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="22" cy="64" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="26" cy="70" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="33" cy="74" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="40" cy="73" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="46" cy="69" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="47" cy="62" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="44" cy="56" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="38" cy="51" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="31" cy="50" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="34" cy="62" r="6" fill={`url(#${id}-nipple)`} />
+      <Circle cx="32" cy="60" r="2" fill="white" opacity={0.2} />
+    </Svg>
+  );
+}
+
+/** Nursing side — right breast (exact icon from icon-nipple-right.svg) */
+export function NippleRightIcon({ size = 24 }: IconProps) {
+  const id = "nipR";
+  return (
+    <Svg width={size} height={size} viewBox="0 0 88 88" fill="none">
+      <Defs>
+        <LinearGradient id={`${id}-bg`} x1="0" y1="0" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FFF5F0" />
+          <Stop offset="1" stopColor="#FFE8DC" />
+        </LinearGradient>
+        <LinearGradient id={`${id}-body`} x1="0" y1="20" x2="88" y2="88" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FDDCB8" />
+          <Stop offset="1" stopColor="#F0B880" />
+        </LinearGradient>
+        <LinearGradient id={`${id}-breast`} x1="20" y1="30" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor="#FDE8C8" />
+          <Stop offset="1" stopColor="#F5C890" />
+        </LinearGradient>
+        <RadialGradient id={`${id}-areola`} cx="58%" cy="40%" r="55%" gradientUnits="objectBoundingBox">
+          <Stop offset="0" stopColor="#E8A878" />
+          <Stop offset="1" stopColor="#C87848" />
+        </RadialGradient>
+        <RadialGradient id={`${id}-nipple`} cx="58%" cy="38%" r="55%" gradientUnits="objectBoundingBox">
+          <Stop offset="0" stopColor="#D08858" />
+          <Stop offset="1" stopColor="#A85C30" />
+        </RadialGradient>
+      </Defs>
+      <Rect width="88" height="88" rx="20" fill={`url(#${id}-bg)`} />
+      <Path d="M4 88 L4 52 C4 40 12 32 24 30 L44 28 L64 30 C76 32 84 40 84 52 L84 88 Z" fill={`url(#${id}-body)`} />
+      <Ellipse cx="52" cy="62" rx="30" ry="26" fill={`url(#${id}-breast)`} />
+      <Ellipse cx="52" cy="64" rx="28" ry="22" fill="rgba(200,120,60,0.08)" />
+      <Ellipse cx="60" cy="54" rx="10" ry="7" fill="white" opacity={0.2} transform="rotate(20 60 54)" />
+      <Circle cx="54" cy="62" r="13" fill={`url(#${id}-areola)`} />
+      <Circle cx="54" cy="62" r="13" fill="none" stroke="rgba(180,90,40,0.15)" strokeWidth={2} />
+      <Circle cx="54" cy="62" r="10" fill="none" stroke="rgba(180,90,40,0.1)" strokeWidth={1} />
+      <Circle cx="44" cy="58" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="42" cy="64" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="46" cy="70" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="53" cy="74" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="60" cy="73" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="66" cy="69" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="67" cy="62" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="64" cy="56" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="58" cy="51" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="51" cy="50" r="1.5" fill="#D08858" opacity={0.5} />
+      <Circle cx="54" cy="62" r="6" fill={`url(#${id}-nipple)`} />
+      <Circle cx="52" cy="60" r="2" fill="white" opacity={0.2} />
     </Svg>
   );
 }

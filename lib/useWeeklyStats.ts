@@ -35,6 +35,14 @@ export interface FeedInsights {
   nursingVsBottleShift: "more_nursing" | "more_bottle" | "balanced" | null;
   maxGapMin: number | null;
   avgGapMin: number | null;
+  /** Nursing sessions with side data this week */
+  nursingWithSideTotal: number;
+  nursingLeftCount: number;
+  nursingRightCount: number;
+  nursingLeftPct: number;
+  nursingRightPct: number;
+  /** Sessions with no side recorded (legacy or skipped) */
+  nursingWithoutSideCount: number;
 }
 
 export interface SleepInsights {
@@ -250,6 +258,24 @@ export function useWeeklyStats(
     const feedTotal = nursingLogs.length + bottleLogs.length || 1;
     const nursingPct = Math.round((nursingLogs.length / feedTotal) * 100);
     const bottlePct = Math.round((bottleLogs.length / feedTotal) * 100);
+
+    // Nursing side balance (left/right)
+    const nursingWithSide = nursingLogs.filter(
+      (l) =>
+        (l.metadata?.side as string) === "left" ||
+        (l.metadata?.side as string) === "right",
+    );
+    const nursingLeftCount = nursingWithSide.filter(
+      (l) => (l.metadata?.side as string) === "left",
+    ).length;
+    const nursingRightCount = nursingWithSide.filter(
+      (l) => (l.metadata?.side as string) === "right",
+    ).length;
+    const nursingWithSideTotal = nursingLeftCount + nursingRightCount;
+    const nursingWithoutSideCount = nursingLogs.length - nursingWithSideTotal;
+    const sideTotal = nursingWithSideTotal || 1;
+    const nursingLeftPct = Math.round((nursingLeftCount / sideTotal) * 100);
+    const nursingRightPct = Math.round((nursingRightCount / sideTotal) * 100);
 
     const prevNursing = previousWeekLogs.filter(
       (l) => l.type === "feed" && (l.metadata?.feed_type as string) !== "bottle",
@@ -519,6 +545,12 @@ export function useWeeklyStats(
         nursingVsBottleShift,
         maxGapMin,
         avgGapMin,
+        nursingWithSideTotal,
+        nursingLeftCount,
+        nursingRightCount,
+        nursingLeftPct,
+        nursingRightPct,
+        nursingWithoutSideCount,
       },
       sleepInsights: {
         bestDay,

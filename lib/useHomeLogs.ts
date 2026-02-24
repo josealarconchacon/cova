@@ -11,6 +11,7 @@ import { DAYS_TO_FETCH, toLocalDateKey, groupLogsByDay } from "./home/dateUtils"
 import type { Log, Profile } from "../types";
 import type { BottleFeedData, SleepLogData } from "../components/logs/QuickActions";
 import type { EditPayload } from "../components/logs/EditLogModal";
+import type { NursingSideValue } from "../components/logs/QuickActions";
 
 export interface UseHomeLogsResult {
   allLogs: Log[];
@@ -23,8 +24,13 @@ export interface UseHomeLogsResult {
   isCoParentOnline: (userId: string) => boolean;
   logsQueryKey: readonly unknown[];
   scrollRef: RefObject<ScrollView | null>;
-  startTimer: (type: "feed" | "sleep", startedAt?: string) => Promise<void>;
+  startTimer: (
+    type: "feed" | "sleep",
+    startedAt?: string,
+    nursingSide?: NursingSideValue,
+  ) => Promise<void>;
   stopTimer: (durationSeconds: number) => Promise<void>;
+  switchNursingSide: (elapsedSeconds: number) => Promise<void>;
   logBottleFeed: (data: BottleFeedData) => Promise<void>;
   logSleep: (data: SleepLogData) => Promise<void>;
   logInstant: (
@@ -117,9 +123,20 @@ export function useHomeLogs(): UseHomeLogsResult {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
-  const startTimer = async (type: "feed" | "sleep", startedAt?: string) => {
+  const startTimer = async (
+    type: "feed" | "sleep",
+    startedAt?: string,
+    nursingSide?: NursingSideValue,
+  ) => {
     if (activeLog) return;
     const started = startedAt ?? new Date().toISOString();
+
+    const metadata =
+      type === "feed" && nursingSide
+        ? { feed_type: "nursing" as const, side: nursingSide }
+        : type === "feed"
+          ? { feed_type: "nursing" as const }
+          : null;
 
     const { data, error } = await supabase
       .from("logs")
@@ -130,7 +147,7 @@ export function useHomeLogs(): UseHomeLogsResult {
         logged_by: profile!.id,
         started_at: started,
         ended_at: null,
-        metadata: type === "feed" ? { feed_type: "nursing" } : null,
+        metadata,
       })
       .select()
       .single();
@@ -141,6 +158,12 @@ export function useHomeLogs(): UseHomeLogsResult {
         type,
         started_at: started,
         baby_id: activeBaby!.id,
+        ...(type === "feed" &&
+          nursingSide && {
+            side: nursingSide,
+            leftDuration: 0,
+            rightDuration: 0,
+          }),
       });
     }
   };
@@ -203,16 +226,91 @@ export function useHomeLogs(): UseHomeLogsResult {
   const stopTimer = async (durationSeconds: number) => {
     if (!activeLog) return;
 
+    const isNursingWithSide =
+      activeLog.type === "feed" && activeLog.side != null;
+    let updatePayload: Record<string, unknown> = {
+      ended_at: new Date().toISOString(),
+      duration_seconds: durationSeconds,
+    };
+
+    if (isNursingWithSide) {
+      const leftDur = activeLog.leftDuration ?? 0;
+      const rightDur = activeLog.rightDuration ?? 0;
+      const timeOnCurrentSide = durationSeconds - leftDur - rightDur;
+
+      const leftDurationFinal =
+        activeLog.side === "left" ? leftDur + timeOnCurrentSide : leftDur;
+      const rightDurationFinal =
+        activeLog.side === "right" ? rightDur + timeOnCurrentSide : rightDur;
+
+      const { data: current } = await supabase
+        .from("logs")
+        .select("metadata")
+        .eq("id", activeLog.id)
+        .single();
+
+      const existingMeta = (current as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+      updatePayload.metadata = {
+        ...(typeof existingMeta === "object" && existingMeta !== null ? existingMeta : {}),
+        feed_type: "nursing",
+        side: activeLog.side,
+        leftDuration: leftDurationFinal,
+        rightDuration: rightDurationFinal,
+      };
+    }
+
+    await supabase.from("logs").update(updatePayload).eq("id", activeLog.id);
+
+    setActiveLog(null);
+    invalidateQueries();
+    scrollToTop();
+  };
+
+  const switchNursingSide = async (elapsedSeconds: number) => {
+    if (!activeLog || activeLog.type !== "feed" || !activeLog.side) return;
+
+    const leftDur = activeLog.leftDuration ?? 0;
+    const rightDur = activeLog.rightDuration ?? 0;
+    const timeOnCurrentSide = elapsedSeconds - leftDur - rightDur;
+
+    const leftDurationNew =
+      activeLog.side === "left" ? leftDur + timeOnCurrentSide : leftDur;
+    const rightDurationNew =
+      activeLog.side === "right" ? rightDur + timeOnCurrentSide : rightDur;
+    const newSide = activeLog.side === "left" ? "right" : "left";
+
+    const { data: current } = await supabase
+      .from("logs")
+      .select("metadata")
+      .eq("id", activeLog.id)
+      .single();
+
+    const existingMeta = (current as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+    const sideHistory = Array.isArray(existingMeta.sideHistory)
+      ? [...(existingMeta.sideHistory as Array<{ side: string; startedAt: string }>)]
+      : [];
+    sideHistory.push({ side: newSide, startedAt: new Date().toISOString() });
+
     await supabase
       .from("logs")
       .update({
-        ended_at: new Date().toISOString(),
-        duration_seconds: durationSeconds,
+        metadata: {
+          ...existingMeta,
+          feed_type: "nursing",
+          side: newSide,
+          leftDuration: leftDurationNew,
+          rightDuration: rightDurationNew,
+          sideHistory,
+        },
       })
       .eq("id", activeLog.id);
 
-    setActiveLog(null);
-    scrollToTop();
+    setActiveLog({
+      ...activeLog,
+      side: newSide as "left" | "right",
+      leftDuration: leftDurationNew,
+      rightDuration: rightDurationNew,
+    });
   };
 
   const logInstant = async (
@@ -294,6 +392,7 @@ export function useHomeLogs(): UseHomeLogsResult {
     scrollRef,
     startTimer,
     stopTimer,
+    switchNursingSide,
     logBottleFeed,
     logSleep,
     logInstant,

@@ -18,6 +18,8 @@ import {
   BreastMilkIcon,
   FormulaIcon,
   OtherLiquidIcon,
+  NippleLeftIcon,
+  NippleRightIcon,
 } from "../../assets/icons/QuickActionIcons";
 import {
   WetIcon,
@@ -77,6 +79,7 @@ const POO_TYPES = [
 type AmountValue  = "little" | "medium" | "lot";
 type PooTypeValue = "seedy_yellow" | "tan_brown" | "green" | "orange" | "watery" | "mucousy" | "black_dark" | "blood";
 type MilkType     = "breast_milk" | "formula" | "other";
+type NursingSide  = "left" | "right";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -109,6 +112,13 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
     log.ended_at ? new Date(log.ended_at) : null,
   );
   const [notes,     setNotes]     = useState(log.notes ?? "");
+
+  // ── Nursing-specific state ─────────────────────────────────────────────────
+  const [nursingSide, setNursingSide] = useState<NursingSide | null>(
+    feedType === "nursing"
+      ? ((log.metadata?.side as NursingSide) ?? null)
+      : null,
+  );
 
   // ── Bottle-specific state ─────────────────────────────────────────────────
   const [milkType, setMilkType] = useState<MilkType | null>(
@@ -193,6 +203,13 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
       };
     }
 
+    if (feedType === "nursing") {
+      const meta = { ...log.metadata, feed_type: "nursing" } as Record<string, unknown>;
+      if (nursingSide) meta.side = nursingSide;
+      else delete meta.side;
+      payload.metadata = meta;
+    }
+
     if (isDiaper) {
       payload.metadata = {
         diaper_type: diaperType,
@@ -249,6 +266,47 @@ export function EditLogModal({ log, onClose, onSave }: Props) {
                     </View>
                   )}
                 </View>
+              )}
+
+              {/* ── Nursing: side selection ──────────────────────────── */}
+              {feedType === "nursing" && (
+                <>
+                  <Text style={s.label}>NURSING SIDE</Text>
+                  <View style={s.sideRow}>
+                    {(["left", "right"] as const).map((side) => {
+                      const isActive = nursingSide === side;
+                      const Icon = side === "left" ? NippleLeftIcon : NippleRightIcon;
+                      return (
+                        <TouchableOpacity
+                          key={side}
+                          style={[
+                            s.sideBtn,
+                            isActive && s.sideBtnActive,
+                          ]}
+                          onPress={() => setNursingSide(side)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={s.sideBtnIconWrap}>
+                            <Icon size={28} />
+                            {isActive && (
+                              <View style={s.sideBtnCheck}>
+                                <Text style={s.sideBtnCheckText}>✓</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              s.sideBtnLabel,
+                              isActive && s.sideBtnLabelActive,
+                            ]}
+                          >
+                            {side === "left" ? "Left" : "Right"}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
               )}
 
               {/* ── Bottle: milk type + amount ───────────────────────── */}
@@ -524,6 +582,57 @@ const s = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
   },
+  sideRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  sideBtn: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: Colors.sandDark,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.cream,
+    minHeight: 90,
+  },
+  sideBtnIconWrap: {
+    position: "relative",
+    marginBottom: 6,
+  },
+  sideBtnCheck: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.moss,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideBtnCheckText: {
+    color: "white",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  sideBtnActive: {
+    borderColor: Colors.moss,
+    borderWidth: 2.5,
+    backgroundColor: Colors.mossPale,
+  },
+  sideBtnLabel: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 13,
+    color: Colors.inkMid,
+  },
+  sideBtnLabelActive: {
+    color: Colors.moss,
+  },
   optionBtn: {
     flex: 1,
     borderWidth: 1.5,
@@ -532,6 +641,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 6,
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: Colors.cream,
     gap: 4,
   },

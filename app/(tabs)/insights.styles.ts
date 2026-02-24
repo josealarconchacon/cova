@@ -336,6 +336,21 @@ export const styles = StyleSheet.create({
     lineHeight: 19,
     paddingLeft: 42,
   },
+  balanceBarTrack: {
+    flexDirection: "row",
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginTop: 10,
+    marginLeft: 42,
+    backgroundColor: Colors.sandDark,
+  },
+  balanceBarLeft: {
+    minWidth: 2,
+  },
+  balanceBarRight: {
+    minWidth: 2,
+  },
   exportBtn: {
     borderRadius: 16,
     padding: 16,

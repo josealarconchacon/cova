@@ -19,14 +19,16 @@ interface ActiveLog {
   type: "feed" | "sleep";
   started_at: string;
   baby_id: string;
+  side?: "left" | "right";
 }
 
 interface Props {
   activeLog: ActiveLog;
   onStop: (durationSeconds: number) => void;
+  onSwitchSide?: (elapsedSeconds: number) => void;
 }
 
-export function TimerBar({ activeLog, onStop }: Props) {
+export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
@@ -64,16 +66,33 @@ export function TimerBar({ activeLog, onStop }: Props) {
     label: "Timer",
   };
 
+  const displayLabel =
+    activeLog.type === "feed" && activeLog.side
+      ? `Nursing — ${activeLog.side === "left" ? "Left" : "Right"}`
+      : cfg.label;
+
   return (
     <View style={[styles.container, { borderLeftColor: cfg.color }]}>
       <cfg.Icon size={28} color={cfg.color} />
 
       <View style={styles.info}>
         <Text style={[styles.label, { color: cfg.color }]}>
-          {cfg.label} in progress
+          {displayLabel} in progress
         </Text>
         <Text style={styles.elapsed}>{formatElapsed()}</Text>
       </View>
+
+      {onSwitchSide && activeLog.type === "feed" && activeLog.side && (
+        <TouchableOpacity
+          style={[styles.switchBtn, { borderColor: cfg.color }]}
+          onPress={() => onSwitchSide(elapsed)}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.switchBtnText, { color: cfg.color }]}>
+            Switch Side
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.stopBtn, { backgroundColor: cfg.color }]}
@@ -120,6 +139,17 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: Colors.ink,
     letterSpacing: 1,
+  },
+  switchBtn: {
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  switchBtnText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 12,
   },
   stopBtn: {
     borderRadius: 14,
