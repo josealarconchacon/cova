@@ -34,6 +34,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="insights"
+        options={{
+          title: "Reports",
+          tabBarIcon: ({ color }) => (
+            <InsightsIcon size={ICON_SIZE} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="family"
         options={{
           title: "Family",
@@ -48,15 +57,6 @@ export default function TabLayout() {
           title: "Baby",
           tabBarIcon: ({ color }) => (
             <BabyIcon size={ICON_SIZE} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="insights"
-        options={{
-          title: "Insights",
-          tabBarIcon: ({ color }) => (
-            <InsightsIcon size={ICON_SIZE} color={color} />
           ),
         }}
       />
