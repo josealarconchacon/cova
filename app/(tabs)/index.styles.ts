@@ -63,7 +63,6 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   greeting: {

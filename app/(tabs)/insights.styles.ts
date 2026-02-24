@@ -3,7 +3,7 @@ import { Colors } from "../../constants/theme";
 
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
-  content: { padding: 20, paddingTop: 60, paddingBottom: 100 },
+  content: { padding: 20, paddingBottom: 100 },
 
   headerRow: {
     flexDirection: "row",

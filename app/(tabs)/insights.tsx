@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/theme";
 import { useStore } from "../../store/useStore";
 import { useInsights } from "../../lib/useInsights";
@@ -16,6 +17,7 @@ import {
 import { styles } from "./insights.styles";
 
 export default function InsightsScreen() {
+  const insets = useSafeAreaInsets();
   const { activeBaby } = useStore();
   const {
     stats,
@@ -48,7 +50,7 @@ export default function InsightsScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
       showsVerticalScrollIndicator={false}
     >
       <InsightsHeader weekRange={weekRange} babyName={activeBaby.name} />

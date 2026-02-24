@@ -1,11 +1,13 @@
 import React from "react";
-import { View, Text, ScrollView, Share } from "react-native";
+import { Text, ScrollView, Share } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useStore } from "../../store/useStore";
 import { useFamilyData } from "../../lib/useFamilyData";
 import { ConnectedView, InviteView } from "../../components/family";
 import { styles } from "./family.styles";
 
 export default function FamilyScreen() {
+  const insets = useSafeAreaInsets();
   const { profile, activeBaby } = useStore();
   const { members, inviteCode } = useFamilyData(profile?.family_id);
 
@@ -22,7 +24,7 @@ export default function FamilyScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.title}>Family</Text>

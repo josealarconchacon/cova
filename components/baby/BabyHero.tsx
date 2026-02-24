@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Baby } from "../../types";
 import { calcAge } from "../../lib/babyUtils";
 import { styles } from "../../app/(tabs)/baby.styles";
@@ -10,8 +11,9 @@ interface BabyHeroProps {
 }
 
 export function BabyHero({ baby, onEdit }: BabyHeroProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
       <View style={styles.heroInner}>
         <TouchableOpacity
           style={styles.avatarWrap}

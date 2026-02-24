@@ -11,8 +11,7 @@ export const styles = StyleSheet.create({
   },
   // ── Hero
   hero: {
-    backgroundColor: Colors.teal,
-    paddingTop: 64,
+    backgroundColor: Colors.cream,
     paddingBottom: 28,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 32,
@@ -31,7 +30,7 @@ export const styles = StyleSheet.create({
     height: 80,
     borderRadius: 28,
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor: Colors.sandDark,
     overflow: "hidden",
   },
   avatarImg: {
@@ -40,7 +39,7 @@ export const styles = StyleSheet.create({
   },
   avatarPlaceholder: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: Colors.sand,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -67,14 +66,14 @@ export const styles = StyleSheet.create({
     fontFamily: "Cormorant-Garamond",
     fontSize: 30,
     fontWeight: "600",
-    color: "white",
+    color: Colors.ink,
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   heroAge: {
     fontFamily: "DM-Sans",
     fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
+    color: Colors.inkLight,
     fontWeight: "500",
   },
   // ── Info grid

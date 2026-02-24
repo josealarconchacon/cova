@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/theme";
 import { getGreeting, formatBabyAge } from "../../lib/home/formatUtils";
 import type { Baby, Profile } from "../../types";
@@ -18,8 +19,9 @@ export function HomeHeader({
   coParent,
   isCoParentOnline,
 }: HomeHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
       <View>
         <Text style={styles.greeting}>
           {getGreeting()}, {profile?.display_name} 👋
