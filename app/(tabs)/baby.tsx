@@ -170,18 +170,21 @@ export default function BabyScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.container}>
       <BabyHero baby={activeBaby} onEdit={openEditProfile} />
-      <BabyInfoGrid baby={activeBaby} />
-      <BabyStatsCard stats={stats} milestoneCount={milestones.length} />
-      <BabyMilestones
-        milestones={milestones}
-        onAddMilestone={() => setMilestoneModal(true)}
-      />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <BabyInfoGrid baby={activeBaby} />
+        <BabyStatsCard stats={stats} milestoneCount={milestones.length} />
+        <BabyMilestones
+          milestones={milestones}
+          onAddMilestone={() => setMilestoneModal(true)}
+        />
+
+      </ScrollView>
 
       <EditProfileModal
         visible={editProfileModal}
@@ -205,6 +208,6 @@ export default function BabyScreen() {
         onSave={saveMilestone}
         onClose={() => setMilestoneModal(false)}
       />
-    </ScrollView>
+    </View>
   );
 }

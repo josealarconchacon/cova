@@ -6,16 +6,24 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.cream,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
     paddingBottom: 100,
   },
-  // ── Hero
+  // ── Hero (sticky)
   hero: {
     backgroundColor: Colors.cream,
     paddingBottom: 28,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroInner: {
     flexDirection: "row",
