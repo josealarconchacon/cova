@@ -74,6 +74,7 @@ export default function InsightsScreen() {
           activeTab={activeTab}
           totalFeeds={stats.totalFeeds}
           totalDiapers={stats.totalDiapers}
+          totalSleepHours={stats.totalSleepHours}
         />
       </View>
 

@@ -7,6 +7,8 @@ export interface DailyStats {
   nursingCount: number;
   bottleCount: number;
   sleepHours: number;
+  napHours: number;
+  nightHours: number;
   diaperCount: number;
   wetCount: number;
   dirtyCount: number;
@@ -28,6 +30,15 @@ export interface SleepInsights {
   bestDay: { dayName: string; hours: number } | null;
   avgNapsPerDay: number;
   longestNapMin: number;
+  totalNapHours: number;
+  totalNightHours: number;
+  napPct: number;
+  nightPct: number;
+  avgWakeWindowMin: number | null;
+  nightWakingsCount: number;
+  sleepQualityScore: number | null;
+  aapRecommendedMin: number;
+  aapRecommendedMax: number;
 }
 
 export interface DiaperInsights {
@@ -101,6 +112,8 @@ export function useWeeklyStats(
         nursingCount: 0,
         bottleCount: 0,
         sleepHours: 0,
+        napHours: 0,
+        nightHours: 0,
         diaperCount: 0,
         wetCount: 0,
         dirtyCount: 0,
@@ -126,12 +139,22 @@ export function useWeeklyStats(
         else day.wetCount++;
       }
       if (log.type === "sleep" && log.duration_seconds) {
-        day.sleepHours += log.duration_seconds / 3600;
+        const hours = log.duration_seconds / 3600;
+        day.sleepHours += hours;
+        const startHour = new Date(log.started_at).getHours();
+        const isNight = startHour >= 22 || startHour < 6;
+        if (isNight) {
+          day.nightHours += hours;
+        } else {
+          day.napHours += hours;
+        }
       }
     }
 
     days.forEach((d) => {
       d.sleepHours = Math.round(d.sleepHours * 10) / 10;
+      d.napHours = Math.round(d.napHours * 10) / 10;
+      d.nightHours = Math.round(d.nightHours * 10) / 10;
     });
 
     const n = days.length;
@@ -183,7 +206,59 @@ export function useWeeklyStats(
     }).length;
 
     // ── Sleep insights ──
-    const sleepLogs = currentWeekLogs.filter((l) => l.type === "sleep");
+    const sleepLogs = currentWeekLogs
+      .filter((l) => l.type === "sleep" && l.duration_seconds)
+      .sort(
+        (a, b) =>
+          new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      );
+    const totalNapHours = days.reduce((a, d) => a + d.napHours, 0);
+    const totalNightHours = days.reduce((a, d) => a + d.nightHours, 0);
+    const totalSleepForPct = totalNapHours + totalNightHours || 1;
+    const napPct = Math.round((totalNapHours / totalSleepForPct) * 100);
+    const nightPct = Math.round((totalNightHours / totalSleepForPct) * 100);
+
+    let avgWakeWindowMin: number | null = null;
+    if (sleepLogs.length >= 2) {
+      const gaps: number[] = [];
+      for (let i = 1; i < sleepLogs.length; i++) {
+        const prevEnd = sleepLogs[i - 1].started_at;
+        const prevDur = (sleepLogs[i - 1].duration_seconds ?? 0) * 1000;
+        const prevEndTime = new Date(prevEnd).getTime() + prevDur;
+        const nextStart = new Date(sleepLogs[i].started_at).getTime();
+        const gapMin = (nextStart - prevEndTime) / 60000;
+        if (gapMin > 0 && gapMin < 24 * 60) gaps.push(gapMin);
+      }
+      if (gaps.length > 0) {
+        avgWakeWindowMin = Math.round(
+          gaps.reduce((a, b) => a + b, 0) / gaps.length,
+        );
+      }
+    }
+
+    const nightSleepSessions = sleepLogs.filter((l) => {
+      const h = new Date(l.started_at).getHours();
+      return h >= 22 || h < 6;
+    }).length;
+    const nightWakingsCount = Math.max(0, nightSleepSessions - 1);
+
+    const totalSleepForQuality = totalNapHours + totalNightHours;
+    let sleepQualityScore: number | null = null;
+    if (totalSleepForQuality > 0 && sleepLogs.length > 0) {
+      const avgSleepPerDay = totalSleepForQuality / n;
+      let score = 70;
+      score -= nightWakingsCount * 8;
+      const avgBlockMin =
+        sleepLogs.reduce((a, l) => a + (l.duration_seconds ?? 0), 0) /
+        sleepLogs.length /
+        60;
+      if (avgBlockMin >= 120) score += 15;
+      else if (avgBlockMin >= 60) score += 5;
+      if (avgSleepPerDay >= 12) score += 15;
+      else if (avgSleepPerDay >= 10) score += 5;
+      sleepQualityScore = Math.max(0, Math.min(100, Math.round(score)));
+    }
+
     let bestDay: SleepInsights["bestDay"] = null;
     for (const d of days) {
       if (d.sleepHours > 0 && (!bestDay || d.sleepHours > bestDay.hours)) {
@@ -200,6 +275,8 @@ export function useWeeklyStats(
             Math.max(...sleepLogs.map((l) => (l.duration_seconds ?? 0) / 60)),
           )
         : 0;
+
+    const aapNewborn = { min: 14, max: 17 };
 
     // ── Diaper insights ──
     const diaperLogs = currentWeekLogs.filter((l) => l.type === "diaper");
@@ -252,6 +329,15 @@ export function useWeeklyStats(
         bestDay,
         avgNapsPerDay,
         longestNapMin,
+        totalNapHours,
+        totalNightHours,
+        napPct,
+        nightPct,
+        avgWakeWindowMin,
+        nightWakingsCount,
+        sleepQualityScore,
+        aapRecommendedMin: aapNewborn.min,
+        aapRecommendedMax: aapNewborn.max,
       },
       diaperInsights: {
         wetTotal,

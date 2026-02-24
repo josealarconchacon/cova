@@ -102,6 +102,29 @@ export const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.sandDark + "80",
   },
+  referenceLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    height: 18,
+    marginBottom: -9,
+  },
+  referenceLineTrack: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.teal + "99",
+  },
+  referenceLineLabel: {
+    fontFamily: "DM-Sans",
+    fontSize: 9,
+    color: Colors.teal,
+    fontWeight: "600",
+    marginRight: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   barsRow: {
     flexDirection: "row",
     gap: 8,
@@ -112,6 +135,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     height: "100%",
+    borderRadius: 12,
+    paddingVertical: 4,
+  },
+  barWrapSelected: {
+    backgroundColor: Colors.sandDark + "40",
   },
   barTrack: {
     flex: 1,
@@ -135,6 +163,39 @@ export const styles = StyleSheet.create({
     color: Colors.inkLight,
     marginTop: 8,
     fontWeight: "500",
+  },
+
+  barDetail: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.sandDark + "50",
+  },
+  barDetailMain: {
+    fontFamily: "DM-Sans",
+    fontSize: 13,
+    color: Colors.ink,
+    lineHeight: 20,
+  },
+  barDetailDay: {
+    fontWeight: "700",
+  },
+  barDetailValue: {
+    fontWeight: "500",
+    color: Colors.inkMid,
+  },
+  barDetailSub: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  barDetailHint: {
+    fontFamily: "DM-Sans",
+    fontSize: 11,
+    color: Colors.inkLight,
+    marginTop: 12,
+    textAlign: "center",
   },
 
   legendRow: {

@@ -7,6 +7,7 @@ import {
 } from "../../assets/icons/QuickActionIcons";
 import { hourRangeLabel } from "../useWeeklyStats";
 import type { WeeklyStats } from "../useWeeklyStats";
+import type { Baby } from "../../types";
 
 export interface InsightCard {
   icon: string;
@@ -117,38 +118,110 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
   return cards;
 }
 
-export function buildSleepInsights(stats: WeeklyStats): InsightCard[] {
+function getAapRecommendation(baby: Baby | null): { min: number; max: number } {
+  if (!baby?.date_of_birth) return { min: 14, max: 17 };
+  const dob = new Date(baby.date_of_birth);
+  const now = new Date();
+  const ageMonths =
+    (now.getFullYear() - dob.getFullYear()) * 12 +
+    (now.getMonth() - dob.getMonth());
+  if (ageMonths < 4) return { min: 14, max: 17 };
+  if (ageMonths < 12) return { min: 12, max: 15 };
+  if (ageMonths < 24) return { min: 11, max: 14 };
+  return { min: 10, max: 13 };
+}
+
+function getWakeWindowLabel(avgMin: number, baby: Baby | null): string {
+  if (!baby?.date_of_birth) return "";
+  const dob = new Date(baby.date_of_birth);
+  const now = new Date();
+  const ageMonths =
+    (now.getFullYear() - dob.getFullYear()) * 12 +
+    (now.getMonth() - dob.getMonth());
+  const newbornMax = 90;
+  const infantMax = 120;
+  const toddlerMax = 180;
+  if (ageMonths < 3 && avgMin > newbornMax)
+    return "Wake windows may be too long for a newborn.";
+  if (ageMonths < 12 && avgMin > infantMax)
+    return "Wake windows may be a bit long for this age.";
+  if (ageMonths >= 12 && avgMin > toddlerMax)
+    return "Wake windows may be long for a toddler.";
+  if (avgMin < 30 && ageMonths > 2)
+    return "Wake windows seem short — baby may be undertired.";
+  return "";
+}
+
+export function buildSleepInsights(
+  stats: WeeklyStats,
+  baby: Baby | null,
+): InsightCard[] {
   const cards: InsightCard[] = [];
   const { sleepInsights } = stats;
+  const aap = getAapRecommendation(baby);
+  const avgPerDay = stats.totalSleepHours / 7;
 
-  if (sleepInsights.bestDay) {
-    cards.push({
-      icon: "🌟",
-      title: "Best sleep day",
-      text: `${sleepInsights.bestDay.dayName} had the most sleep at ${sleepInsights.bestDay.hours}h total.`,
-      color: Colors.sky,
-    });
-  }
+  cards.push({
+    icon: "📊",
+    title: "Sleep Debt Tracker",
+    text:
+      stats.totalSleepHours > 0
+        ? `Baby slept ${avgPerDay.toFixed(1)} hrs/day this week — AAP recommends ${aap.min}–${aap.max} hrs for ${baby?.date_of_birth ? "this age" : "newborns"}.`
+        : "Log sleep to compare against AAP age-recommended totals (14–17 hrs for newborns).",
+    color: Colors.sky,
+    IconComponent: SleepIcon,
+  });
 
-  if (sleepInsights.avgNapsPerDay > 0) {
-    const longestH = Math.floor(sleepInsights.longestNapMin / 60);
-    const longestM = sleepInsights.longestNapMin % 60;
-    const longestStr =
-      longestH > 0 ? `${longestH}h ${longestM}m` : `${longestM} min`;
+  if (sleepInsights.avgWakeWindowMin != null) {
+    const label = getWakeWindowLabel(sleepInsights.avgWakeWindowMin, baby);
     cards.push({
-      icon: "📊",
-      title: "Nap rhythm",
-      text: `Averaging ${sleepInsights.avgNapsPerDay} nap${sleepInsights.avgNapsPerDay === 1 ? "" : "s"}/day. Longest: ${longestStr}.`,
+      icon: "⏱️",
+      title: "Wake Window Analysis",
+      text:
+        label ||
+        `Average awake time between sleep sessions: ${sleepInsights.avgWakeWindowMin} min.`,
       color: Colors.teal,
+      IconComponent: StartTimerIcon,
+    });
+  } else if (stats.totalSleepHours > 0) {
+    cards.push({
+      icon: "⏱️",
+      title: "Wake Window Analysis",
+      text: "Not enough sleep sessions to compute wake windows yet.",
+      color: Colors.teal,
+      IconComponent: StartTimerIcon,
     });
   }
 
-  if (stats.avgSleepHours > 0) {
+  if (sleepInsights.sleepQualityScore != null) {
+    const label =
+      sleepInsights.sleepQualityScore >= 80
+        ? "Good"
+        : sleepInsights.sleepQualityScore >= 60
+          ? "Fair"
+          : "Poor";
     cards.push({
       icon: "😴",
-      title: "Daily average",
-      text: `Averaging ${stats.avgSleepHours}h of sleep per day this week.`,
+      title: "Sleep Quality Score",
+      text: `${sleepInsights.sleepQualityScore}/100 — ${label}. Based on night wakings, sleep block length, and daily totals.`,
       color: Colors.lav,
+    });
+  } else if (stats.totalSleepHours > 0) {
+    cards.push({
+      icon: "😴",
+      title: "Sleep Quality Score",
+      text: "Keep logging sleep to see a quality score.",
+      color: Colors.lav,
+    });
+  }
+
+  if (stats.totalSleepHours > 0) {
+    cards.push({
+      icon: "🌙",
+      title: "Nap vs. Night Split",
+      text: `${sleepInsights.nightPct}% night sleep, ${sleepInsights.napPct}% naps this week.`,
+      color: Colors.dusk,
+      IconComponent: SleepIcon,
     });
   }
 

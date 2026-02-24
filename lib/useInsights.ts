@@ -115,10 +115,10 @@ export function useInsights(): UseInsightsResult {
   const insights = useMemo(
     (): Record<Tab, InsightCard[]> => ({
       feeds: buildFeedInsights(stats),
-      sleep: buildSleepInsights(stats),
+      sleep: buildSleepInsights(stats, activeBaby ?? null),
       diapers: buildDiaperInsights(stats),
     }),
-    [stats],
+    [stats, activeBaby],
   );
 
   const weekRange = formatWeekRange(CURRENT_WEEK_DAYS);
@@ -164,8 +164,8 @@ export function useInsights(): UseInsightsResult {
     }
 
     return [
-      { label: "Daily Avg", value: avg.toFixed(1), suffix: "h" },
       { label: "This Week", value: stats.totalSleepHours.toFixed(1), suffix: "h" },
+      { label: "Daily Avg", value: avg.toFixed(1), suffix: "h" },
       wowStat,
     ];
   }, [activeTab, stats, wowLabel, wowChange, avg]);
