@@ -2,12 +2,15 @@ import { useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   RefreshControl,
   ActivityIndicator,
   Platform,
   UIManager,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated";
 import { Colors } from "../../constants/theme";
 import { useStore } from "../../store/useStore";
 import { useHomeLogs } from "../../lib/useHomeLogs";
@@ -30,6 +33,12 @@ export default function HomeScreen() {
   const { profile, activeBaby, activeLog } = useStore();
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [editingLog, setEditingLog] = useState<Log | null>(null);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
 
   const {
     allLogs,
@@ -80,10 +89,13 @@ export default function HomeScreen() {
         activeBaby={activeBaby}
         coParent={coParent}
         isCoParentOnline={isCoParentOnline}
+        scrollY={scrollY}
       />
 
-      <ScrollView
-        ref={scrollRef}
+      <Animated.ScrollView
+        ref={scrollRef as React.RefObject<Animated.ScrollView>}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -139,7 +151,7 @@ export default function HomeScreen() {
         ))}
 
         {allLogs.length === 0 && !isLoading && <HomeEmptyState />}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {editingLog && (
         <EditLogModal

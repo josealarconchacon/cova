@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from "react";
-import {
-  View,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, Alert, ActivityIndicator } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated";
 import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
@@ -27,6 +26,12 @@ export default function BabyScreen() {
   const { profile, activeBaby, setActiveBaby } = useStore();
   const queryClient = useQueryClient();
   const { milestones, stats } = useBabyData(activeBaby?.id);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
 
   // Edit profile state
   const [editProfileModal, setEditProfileModal] = useState(false);
@@ -171,8 +176,14 @@ export default function BabyScreen() {
 
   return (
     <View style={styles.container}>
-      <BabyHero baby={activeBaby} onEdit={openEditProfile} />
-      <ScrollView
+      <BabyHero
+        baby={activeBaby}
+        onEdit={openEditProfile}
+        scrollY={scrollY}
+      />
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -184,7 +195,7 @@ export default function BabyScreen() {
           onAddMilestone={() => setMilestoneModal(true)}
         />
 
-      </ScrollView>
+      </Animated.ScrollView>
 
       <EditProfileModal
         visible={editProfileModal}

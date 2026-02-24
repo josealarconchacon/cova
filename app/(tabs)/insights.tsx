@@ -1,5 +1,9 @@
 import React from "react";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/theme";
 import { useStore } from "../../store/useStore";
@@ -18,6 +22,12 @@ import { styles } from "./insights.styles";
 
 export default function InsightsScreen() {
   const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      scrollY.value = e.contentOffset.y;
+    },
+  });
   const { activeBaby } = useStore();
   const {
     stats,
@@ -48,20 +58,35 @@ export default function InsightsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <InsightsHeader weekRange={weekRange} babyName={activeBaby.name} />
+    <View style={styles.container}>
+      <View
+        style={{
+          paddingTop: insets.top + 24,
+          paddingHorizontal: 20,
+          backgroundColor: Colors.cream,
+        }}
+      >
+        <InsightsHeader
+          weekRange={weekRange}
+          babyName={activeBaby.name}
+          scrollY={scrollY}
+        />
+      </View>
 
-      <TabPills
-        tabs={TABS}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <TabPills
+          tabs={TABS}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
 
-      <View style={styles.chartCard}>
+        <View style={styles.chartCard}>
         <StatStrip items={statItems} accentColor={activeConfig.color} />
 
         <InsightsChart
@@ -89,14 +114,15 @@ export default function InsightsScreen() {
                 : "Wet/dirty ratio shifted toward more dirty this week"}
             </Text>
           )}
-      </View>
+        </View>
 
-      <Text style={styles.sectionLabel}>Patterns</Text>
-      {insights[activeTab].map((item) => (
-        <InsightCard key={item.title} item={item} />
-      ))}
+        <Text style={styles.sectionLabel}>Patterns</Text>
+        {insights[activeTab].map((item) => (
+          <InsightCard key={item.title} item={item} />
+        ))}
 
-      <ExportButton accentColor={activeConfig.color} />
-    </ScrollView>
+        <ExportButton accentColor={activeConfig.color} />
+      </Animated.ScrollView>
+    </View>
   );
 }

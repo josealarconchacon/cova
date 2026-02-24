@@ -3,6 +3,7 @@ import { Colors } from "../../constants/theme";
 
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.cream },
+  scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 100 },
 
   headerRow: {

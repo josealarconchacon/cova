@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.cream,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
     padding: 24,
     paddingBottom: 100,
@@ -21,7 +24,6 @@ export const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontSize: 14,
     color: Colors.inkLight,
-    marginBottom: 28,
   },
   // ── Connected styles
   syncBadge: {
