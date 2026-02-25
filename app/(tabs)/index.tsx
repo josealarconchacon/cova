@@ -57,6 +57,7 @@ export default function HomeScreen() {
     logInstant,
     handleDelete,
     handleSaveEdit,
+    updateTimerStartTime,
   } = useHomeLogs();
 
   const today = toLocalDateKey(new Date());
@@ -118,6 +119,7 @@ export default function HomeScreen() {
                 ? switchNursingSide
                 : undefined
             }
+            onEditStartTime={updateTimerStartTime}
           />
         )}
 

@@ -40,6 +40,7 @@ export interface UseHomeLogsResult {
   ) => Promise<void>;
   handleDelete: (id: string) => Promise<void>;
   handleSaveEdit: (logId: string, payload: EditPayload) => Promise<void>;
+  updateTimerStartTime: (logId: string, newStartedAt: string) => Promise<void>;
 }
 
 export function useHomeLogs(): UseHomeLogsResult {
@@ -379,6 +380,25 @@ export function useHomeLogs(): UseHomeLogsResult {
     invalidateQueries();
   };
 
+  const updateTimerStartTime = async (
+    logId: string,
+    newStartedAt: string,
+  ) => {
+    if (!activeLog || activeLog.id !== logId) return;
+
+    const { error } = await supabase
+      .from("logs")
+      .update({ started_at: newStartedAt })
+      .eq("id", logId);
+
+    if (error) {
+      Alert.alert("Error", "Could not update start time. Please try again.");
+      return;
+    }
+
+    setActiveLog({ ...activeLog, started_at: newStartedAt });
+  };
+
   return {
     allLogs,
     todayLogs,
@@ -398,5 +418,6 @@ export function useHomeLogs(): UseHomeLogsResult {
     logInstant,
     handleDelete,
     handleSaveEdit,
+    updateTimerStartTime,
   };
 }

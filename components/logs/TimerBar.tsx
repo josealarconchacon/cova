@@ -1,9 +1,16 @@
 import React from "react";
 import { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+} from "react-native";
 import * as Haptics from "expo-haptics";
 import { Colors } from "../../constants/theme";
 import { FeedIcon, SleepIcon } from "../../assets/icons/QuickActionIcons";
+import { TimePickerField } from "./TimePickerField";
 
 const CONFIG: Record<string, { color: string; Icon: React.FC<{ size?: number; color?: string }>; label: string }> = {
   feed: { color: Colors.dusk, Icon: FeedIcon, label: "Feeding" },
@@ -12,6 +19,13 @@ const CONFIG: Record<string, { color: string; Icon: React.FC<{ size?: number; co
 
 function pad(n: number) {
   return String(Math.floor(n)).padStart(2, "0");
+}
+
+function formatStartTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 interface ActiveLog {
@@ -26,9 +40,26 @@ interface Props {
   activeLog: ActiveLog;
   onStop: (durationSeconds: number) => void;
   onSwitchSide?: (elapsedSeconds: number) => void;
+  onEditStartTime?: (logId: string, newStartedAt: string) => Promise<void>;
 }
 
-export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
+function mergeDateTime(dateStr: string, timeDate: Date): Date {
+  const d = new Date(dateStr);
+  d.setHours(
+    timeDate.getHours(),
+    timeDate.getMinutes(),
+    timeDate.getSeconds(),
+    0,
+  );
+  return d;
+}
+
+export function TimerBar({
+  activeLog,
+  onStop,
+  onSwitchSide,
+  onEditStartTime,
+}: Props) {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
@@ -71,7 +102,25 @@ export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
       ? `Nursing — ${activeLog.side === "left" ? "Left" : "Right"}`
       : cfg.label;
 
+  const [showEditTime, setShowEditTime] = useState(false);
+  const [editTimeValue, setEditTimeValue] = useState(
+    () => new Date(activeLog.started_at),
+  );
+
+  const handleEditTimeOpen = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditTimeValue(new Date(activeLog.started_at));
+    setShowEditTime(true);
+  };
+
+  const handleEditTimeSave = async () => {
+    const merged = mergeDateTime(activeLog.started_at, editTimeValue);
+    await onEditStartTime?.(activeLog.id, merged.toISOString());
+    setShowEditTime(false);
+  };
+
   return (
+    <>
     <View style={[styles.container, { borderLeftColor: cfg.color }]}>
       <View style={styles.leftBlock}>
         <View style={styles.iconWrap}>
@@ -81,6 +130,22 @@ export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
           <Text style={[styles.label, { color: cfg.color }]}>
             {displayLabel} in progress
           </Text>
+          {onEditStartTime ? (
+            <TouchableOpacity
+              onPress={handleEditTimeOpen}
+              activeOpacity={0.7}
+              style={styles.startTimeTouchable}
+            >
+              <Text style={styles.startTime}>
+                Started at {formatStartTime(activeLog.started_at)}
+              </Text>
+              <Text style={[styles.editHint, { color: cfg.color }]}>Edit</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.startTime}>
+              Started at {formatStartTime(activeLog.started_at)}
+            </Text>
+          )}
           <Text
             style={styles.elapsed}
             numberOfLines={1}
@@ -113,6 +178,51 @@ export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
         </TouchableOpacity>
       </View>
     </View>
+
+    {onEditStartTime && (
+      <Modal transparent animationType="fade" visible={showEditTime}>
+        <TouchableOpacity
+          style={styles.editBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowEditTime(false)}
+        >
+          <View
+            style={styles.editSheet}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.editSheetInner}>
+              <Text style={styles.editSheetTitle}>Edit start time</Text>
+              <Text style={styles.editSheetHint}>
+                Adjust if baby fell asleep or started feeding earlier
+              </Text>
+              <TimePickerField
+                label="Started at"
+                value={editTimeValue}
+                onChange={setEditTimeValue}
+                accentColor={cfg.color}
+              />
+              <View style={styles.editSheetActions}>
+                <TouchableOpacity
+                  style={styles.editCancelBtn}
+                  onPress={() => setShowEditTime(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.editCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editSaveBtn, { backgroundColor: cfg.color }]}
+                  onPress={handleEditTimeSave}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.editSaveText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    )}
+  </>
   );
 }
 
@@ -155,6 +265,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 2,
   },
+  startTimeTouchable: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+    alignSelf: "flex-start",
+  },
+  startTime: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.inkLight,
+    marginBottom: 2,
+  },
+  editHint: {
+    fontFamily: "DM-Sans",
+    fontSize: 11,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   elapsed: {
     fontFamily: "DM-Mono",
     fontSize: 28,
@@ -192,6 +321,65 @@ const styles = StyleSheet.create({
     fontFamily: "DM-Sans",
     fontWeight: "700",
     fontSize: 14,
+    color: "white",
+  },
+  editBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(42,32,24,0.45)",
+    justifyContent: "flex-end",
+  },
+  editSheet: {
+    backgroundColor: Colors.cream,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  editSheetInner: {
+    marginBottom: 8,
+  },
+  editSheetTitle: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 18,
+    color: Colors.ink,
+    marginBottom: 4,
+  },
+  editSheetHint: {
+    fontFamily: "DM-Sans",
+    fontSize: 13,
+    color: Colors.inkLight,
+    marginBottom: 16,
+  },
+  editSheetActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  editCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.sand,
+    alignItems: "center",
+  },
+  editCancelText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 15,
+    color: Colors.ink,
+  },
+  editSaveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  editSaveText: {
+    fontFamily: "DM-Sans",
+    fontWeight: "700",
+    fontSize: 15,
     color: "white",
   },
 });
