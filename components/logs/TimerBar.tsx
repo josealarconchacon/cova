@@ -73,34 +73,45 @@ export function TimerBar({ activeLog, onStop, onSwitchSide }: Props) {
 
   return (
     <View style={[styles.container, { borderLeftColor: cfg.color }]}>
-      <cfg.Icon size={28} color={cfg.color} />
-
-      <View style={styles.info}>
-        <Text style={[styles.label, { color: cfg.color }]}>
-          {displayLabel} in progress
-        </Text>
-        <Text style={styles.elapsed}>{formatElapsed()}</Text>
+      <View style={styles.leftBlock}>
+        <View style={styles.iconWrap}>
+          <cfg.Icon size={28} color={cfg.color} />
+        </View>
+        <View style={styles.info}>
+          <Text style={[styles.label, { color: cfg.color }]}>
+            {displayLabel} in progress
+          </Text>
+          <Text
+            style={styles.elapsed}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {formatElapsed()}
+          </Text>
+        </View>
       </View>
 
-      {onSwitchSide && activeLog.type === "feed" && activeLog.side && (
+      <View style={styles.actions}>
+        {onSwitchSide && activeLog.type === "feed" && activeLog.side && (
+          <TouchableOpacity
+            style={[styles.switchBtn, { borderColor: cfg.color }]}
+            onPress={() => onSwitchSide(elapsed)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.switchBtnText, { color: cfg.color }]}>
+              Switch Side
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          style={[styles.switchBtn, { borderColor: cfg.color }]}
-          onPress={() => onSwitchSide(elapsed)}
-          activeOpacity={0.8}
+          style={[styles.stopBtn, { backgroundColor: cfg.color }]}
+          onPress={handleStop}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.switchBtnText, { color: cfg.color }]}>
-            Switch Side
-          </Text>
+          <Text style={styles.stopText}>Stop</Text>
         </TouchableOpacity>
-      )}
-
-      <TouchableOpacity
-        style={[styles.stopBtn, { backgroundColor: cfg.color }]}
-        onPress={handleStop}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.stopText}>Stop</Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -109,10 +120,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    justifyContent: "space-between",
     backgroundColor: "white",
     borderRadius: 20,
-    padding: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     marginBottom: 16,
     borderLeftWidth: 4,
     shadowColor: "#000",
@@ -121,11 +133,21 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  icon: {
-    marginRight: 2,
+  leftBlock: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  iconWrap: {
+    justifyContent: "center",
   },
   info: {
     flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
   },
   label: {
     fontFamily: "DM-Sans",
@@ -135,16 +157,22 @@ const styles = StyleSheet.create({
   },
   elapsed: {
     fontFamily: "DM-Mono",
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "500",
     color: Colors.ink,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+  },
+  actions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
   },
   switchBtn: {
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: 10,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   switchBtnText: {
     fontFamily: "DM-Sans",
@@ -152,9 +180,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   stopBtn: {
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
