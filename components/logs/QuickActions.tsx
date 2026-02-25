@@ -100,6 +100,9 @@ export function QuickActions({
   onSleepLog,
 }: Props) {
   const [modal, setModal] = useState<ActionId | null>(null);
+  const [feedModalInitialTab, setFeedModalInitialTab] = useState<
+    "nursing" | "bottle"
+  >("nursing");
 
   const handlePress = async (action: (typeof ACTIONS)[number]) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -107,6 +110,7 @@ export function QuickActions({
     if (action.id === "feed") {
       // If nursing timer already running, TimerBar handles stop — don't open modal
       if (activeTimerType === "feed") return;
+      setFeedModalInitialTab("nursing");
       setModal("feed");
     } else if (action.id === "sleep") {
       if (activeTimerType === "sleep") return;
@@ -164,6 +168,7 @@ export function QuickActions({
       {/* ── Feed modal ── */}
       {modal === "feed" && (
         <FeedModal
+          initialTab={feedModalInitialTab}
           onClose={() => setModal(null)}
           onStartNursing={(startedAt, side) => {
             onTimerAction("feed", startedAt, side);
@@ -326,14 +331,24 @@ function AmountSlider({ value, min, max, step, color, onChange }: SliderProps) {
 export type NursingSideValue = "left" | "right";
 
 interface FeedModalProps {
+  initialTab?: "nursing" | "bottle";
   onClose: () => void;
   onStartNursing: (startedAt: string, side: NursingSideValue) => void;
   onSaveBottle: (data: BottleFeedData) => void;
 }
 
-function FeedModal({ onClose, onStartNursing, onSaveBottle }: FeedModalProps) {
+function FeedModal({
+  initialTab = "nursing",
+  onClose,
+  onStartNursing,
+  onSaveBottle,
+}: FeedModalProps) {
   const now = new Date();
-  const [tab, setTab] = useState<"nursing" | "bottle">("nursing");
+  const [tab, setTab] = useState<"nursing" | "bottle">(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   // Nursing state
   const [nursingStart, setNursingStart] = useState(now);

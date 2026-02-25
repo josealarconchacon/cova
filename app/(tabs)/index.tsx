@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { useHomeLogs } from "../../lib/useHomeLogs";
 import { QuickActions } from "../../components/logs/QuickActions";
 import { TimerBar } from "../../components/logs/TimerBar";
 import { SummaryCards } from "../../components/logs/SummaryCards";
+import { NextSuggestedFeed } from "../../components/logs/NextSuggestedFeed";
+import { useNextFeedPrediction } from "../../lib/useNextFeedPrediction";
 import { EditLogModal } from "../../components/logs/EditLogModal";
 import type { EditPayload } from "../../components/logs/EditLogModal";
 import { DaySection } from "../../components/logs/DaySection";
@@ -33,6 +35,7 @@ export default function HomeScreen() {
   const { profile, activeBaby, activeLog } = useStore();
   const [swipeOpenId, setSwipeOpenId] = useState<string | null>(null);
   const [editingLog, setEditingLog] = useState<Log | null>(null);
+
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -59,6 +62,12 @@ export default function HomeScreen() {
     handleSaveEdit,
     updateTimerStartTime,
   } = useHomeLogs();
+
+  const feedLogs = useMemo(
+    () => allLogs.filter((l) => l.type === "feed"),
+    [allLogs],
+  );
+  const nextFeedPrediction = useNextFeedPrediction(feedLogs, activeBaby);
 
   const today = toLocalDateKey(new Date());
 
@@ -109,6 +118,8 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SummaryCards logs={todayLogs} />
+
+        <NextSuggestedFeed prediction={nextFeedPrediction} />
 
         {activeLog && (
           <TimerBar
