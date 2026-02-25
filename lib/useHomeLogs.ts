@@ -197,6 +197,8 @@ export function useHomeLogs(): UseHomeLogsResult {
         amount_unit: data.amount_unit,
       },
     });
+
+    invalidateQueries();
   };
 
   const logSleep = async (data: SleepLogData) => {
