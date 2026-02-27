@@ -91,9 +91,7 @@ export function useInsights(): UseInsightsResult {
   const currentWeekLogs = allLogs.filter(
     (l) => l.started_at >= weekStartISO && l.started_at <= weekEndISO,
   );
-  const previousWeekLogs = allLogs.filter(
-    (l) => l.started_at < weekStartISO,
-  );
+  const previousWeekLogs = allLogs.filter((l) => l.started_at < weekStartISO);
 
   const stats = useWeeklyStats(currentWeekLogs, previousWeekLogs);
 
@@ -104,17 +102,11 @@ export function useInsights(): UseInsightsResult {
   };
 
   const chartData = useMemo(
-    () =>
-      stats.days.map(
-        (d: DailyStats) => d[typeMap[activeTab]] as number,
-      ),
+    () => stats.days.map((d: DailyStats) => d[typeMap[activeTab]] as number),
     [stats.days, activeTab],
   );
 
-  const maxVal = useMemo(
-    () => Math.max(...chartData, 1) * 1.25,
-    [chartData],
-  );
+  const maxVal = useMemo(() => Math.max(...chartData, 1) * 1.25, [chartData]);
 
   const insights = useMemo(
     (): Record<Tab, InsightCard[]> => ({
@@ -153,22 +145,46 @@ export function useInsights(): UseInsightsResult {
 
     if (activeTab === "feeds") {
       return [
-        { label: "Nursing", value: stats.feedInsights.nursingTotal.toString(), suffix: "" },
-        { label: "Bottle", value: stats.feedInsights.bottleTotal.toString(), suffix: "" },
+        {
+          label: "Nursing",
+          value: stats.feedInsights.nursingTotal.toString(),
+          suffix: "",
+        },
+        {
+          label: "Bottle",
+          value: stats.feedInsights.bottleTotal.toString(),
+          suffix: "",
+        },
         wowStat,
       ];
     }
 
     if (activeTab === "diapers") {
       return [
-        { label: "Wet", value: stats.diaperInsights.wetTotal.toString(), suffix: "" },
-        { label: "Dirty", value: stats.diaperInsights.dirtyTotal.toString(), suffix: "" },
-        { label: "Both", value: stats.diaperInsights.bothTotal.toString(), suffix: "" },
+        {
+          label: "Wet",
+          value: stats.diaperInsights.wetTotal.toString(),
+          suffix: "",
+        },
+        {
+          label: "Dirty",
+          value: stats.diaperInsights.dirtyTotal.toString(),
+          suffix: "",
+        },
+        {
+          label: "Both",
+          value: stats.diaperInsights.bothTotal.toString(),
+          suffix: "",
+        },
       ];
     }
 
     return [
-      { label: "This Week", value: stats.totalSleepHours.toFixed(1), suffix: "h" },
+      {
+        label: "This Week",
+        value: stats.totalSleepHours.toFixed(1),
+        suffix: "h",
+      },
       { label: "Daily Avg", value: avg.toFixed(1), suffix: "h" },
       wowStat,
     ];
