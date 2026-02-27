@@ -87,33 +87,33 @@ export default function InsightsScreen() {
         />
 
         <View style={styles.chartCard}>
-        <StatStrip items={statItems} accentColor={activeConfig.color} />
+          <StatStrip items={statItems} accentColor={activeConfig.color} />
 
-        <InsightsChart
-          activeTab={activeTab}
-          chartData={chartData}
-          maxVal={maxVal}
-          stats={stats}
-          accentColor={activeConfig.color}
-        />
+          <InsightsChart
+            activeTab={activeTab}
+            chartData={chartData}
+            maxVal={maxVal}
+            stats={stats}
+            accentColor={activeConfig.color}
+          />
 
-        <ChartLegend
-          activeTab={activeTab}
-          totalFeeds={stats.totalFeeds}
-          totalDiapers={stats.totalDiapers}
-          totalSleepHours={stats.totalSleepHours}
-        />
+          <ChartLegend
+            activeTab={activeTab}
+            totalFeeds={stats.totalFeeds}
+            totalDiapers={stats.totalDiapers}
+            totalSleepHours={stats.totalSleepHours}
+          />
 
-        {activeTab === "diapers" &&
-          stats.totalDiapers > 0 &&
-          stats.diaperInsights.wetVsDirtyShift != null &&
-          stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
-            <Text style={styles.wetDirtyShiftNote}>
-              {stats.diaperInsights.wetVsDirtyShift === "more_wet"
-                ? "Wet/dirty ratio shifted toward more wet this week"
-                : "Wet/dirty ratio shifted toward more dirty this week"}
-            </Text>
-          )}
+          {activeTab === "diapers" &&
+            stats.totalDiapers > 0 &&
+            stats.diaperInsights.wetVsDirtyShift != null &&
+            stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
+              <Text style={styles.wetDirtyShiftNote}>
+                {stats.diaperInsights.wetVsDirtyShift === "more_wet"
+                  ? "Wet/dirty ratio shifted toward more wet this week"
+                  : "Wet/dirty ratio shifted toward more dirty this week"}
+              </Text>
+            )}
         </View>
 
         <Text style={styles.sectionLabel}>Patterns</Text>
