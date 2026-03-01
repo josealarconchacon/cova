@@ -10,11 +10,15 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { router } from "expo-router";
 import { supabase, withTimeout } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 import type { Baby } from "../../types";
+import { signInWithApple } from "../../lib/auth/appleAuth";
+import { getPendingInviteCode, clearPendingInviteCode } from "../../lib/family/pendingInvite";
+import { joinFamily } from "../../lib/family/joinFamily";
 
 export default function LoginScreen() {
   const setProfile = useStore((s) => s.setProfile);
@@ -104,6 +108,76 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { userId, fullName } = await signInWithApple();
+      const displayName = fullName?.trim() || "User";
+
+      const { data: profile, error: profileError } = await withTimeout(
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+      );
+
+      if (profileError || !profile) {
+        // New user — create profile (join or create family)
+        const inviteCode = await getPendingInviteCode();
+        if (inviteCode) {
+          await joinFamily(inviteCode, userId, displayName, "caregiver");
+          await clearPendingInviteCode();
+        } else {
+          const { error: setupError } = await supabase.rpc(
+            "create_family_and_profile",
+            {
+              p_user_id: userId,
+              p_display_name: displayName,
+              p_role: "caregiver",
+            },
+          );
+          if (setupError) throw setupError;
+        }
+
+        const { data: newProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        if (!newProfile) throw new Error("Profile not created");
+        setProfile(newProfile);
+
+        const { data: babies } = await withTimeout(
+          supabase
+            .from("babies")
+            .select("*")
+            .eq("family_id", newProfile.family_id)
+            .order("created_at", { ascending: true })
+            .limit(1),
+        );
+        const baby = (babies?.[0] as Baby) ?? null;
+        setActiveBaby(baby);
+        router.replace(baby ? "/(tabs)/" : "/onboarding");
+      } else {
+        setProfile(profile);
+        const { data: babies } = await withTimeout(
+          supabase
+            .from("babies")
+            .select("*")
+            .eq("family_id", profile.family_id)
+            .order("created_at", { ascending: true })
+            .limit(1),
+        );
+        const baby = (babies?.[0] as Baby) ?? null;
+        setActiveBaby(baby);
+        router.replace(baby ? "/(tabs)/" : "/onboarding");
+      }
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err?.code === "ERR_REQUEST_CANCELED") return;
+      Alert.alert("Sign in failed", (e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -173,17 +247,23 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Divider */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Apple Sign In */}
-        <TouchableOpacity style={styles.appleBtn} activeOpacity={0.85}>
-          <Text style={styles.appleBtnText}>🍎 Sign in with Apple</Text>
-        </TouchableOpacity>
+        {/* Divider + Apple Sign In (iOS only — Apple requires it when offering other sign-in) */}
+        {Platform.OS === "ios" && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
+              style={styles.appleNativeBtn}
+              onPress={handleAppleSignIn}
+            />
+          </>
+        )}
 
         {/* Switch to Sign Up */}
         <View style={styles.switchRow}>
@@ -302,8 +382,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.inkLight,
   },
+  appleNativeBtn: {
+    width: "100%",
+    height: 48,
+    marginBottom: 4,
+  },
   appleBtn: {
-    backgroundColor: "#2A2018",
+    backgroundColor: Colors.ink,
     borderRadius: 18,
     padding: 17,
     alignItems: "center",
