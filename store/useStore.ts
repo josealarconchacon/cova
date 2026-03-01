@@ -20,6 +20,7 @@ interface CovaStore {
   setProfile: (p: Profile | null) => void;
   setActiveBaby: (b: Baby | null) => void;
   setActiveLog: (log: ActiveLog | null) => void;
+  reset: () => void;
 }
 
 export const useStore = create<CovaStore>((set) => ({
@@ -29,4 +30,6 @@ export const useStore = create<CovaStore>((set) => ({
   setProfile: (profile) => set({ profile }),
   setActiveBaby: (activeBaby) => set({ activeBaby }),
   setActiveLog: (activeLog) => set({ activeLog }),
+  reset: () =>
+    set({ profile: null, activeBaby: null, activeLog: null }),
 }));
