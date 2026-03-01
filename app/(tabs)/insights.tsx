@@ -20,7 +20,8 @@ import { TABS } from "../../lib/insights";
 import {
   InsightsHeader,
   TabPills,
-  WeekPickerOverlay,
+  WeekCalendarPanel,
+  type WeekCalendarPanelRef,
   InsightsEmptyState,
   FeedsTabContent,
   SleepTabContent,
@@ -54,6 +55,7 @@ export default function InsightsScreen() {
   const { babies } = useBabies(profile?.family_id);
 
   const {
+    allLogs,
     stats,
     insights,
     chartData,
@@ -67,6 +69,9 @@ export default function InsightsScreen() {
     previousWeekLogs,
     refetch,
   } = useInsights(weekOffset);
+
+  const calendarPanelRef = useRef<WeekCalendarPanelRef>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -127,12 +132,19 @@ export default function InsightsScreen() {
             paddingHorizontal: 20,
           },
         ]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
         <InsightsHeader
           weekRange={weekRange}
           babyName={activeBaby.name}
           scrollY={scrollY}
-          onDatePress={() => setWeekPickerVisible(true)}
+          onDatePress={() => {
+            if (weekPickerVisible) {
+              calendarPanelRef.current?.close();
+            } else {
+              setWeekPickerVisible(true);
+            }
+          }}
           babies={babies}
           activeBaby={activeBaby}
           onSelectBaby={setActiveBaby}
@@ -217,15 +229,21 @@ export default function InsightsScreen() {
         )}
       </Animated.ScrollView>
 
-      <WeekPickerOverlay
-        visible={weekPickerVisible}
-        onClose={() => setWeekPickerVisible(false)}
-        selectedOffset={weekOffset}
-        onSelectWeek={(offset) => {
-          setWeekOffset(offset);
-          setWeekPickerVisible(false);
-        }}
-      />
+      {weekPickerVisible && (
+        <View
+          style={[styles.calendarOverlay, { top: headerHeight }]}
+          pointerEvents="box-none"
+        >
+          <WeekCalendarPanel
+            ref={calendarPanelRef}
+            visible={weekPickerVisible}
+            onClose={() => setWeekPickerVisible(false)}
+            selectedOffset={weekOffset}
+            onSelectWeek={setWeekOffset}
+            allLogs={allLogs}
+          />
+        </View>
+      )}
     </View>
   );
 }

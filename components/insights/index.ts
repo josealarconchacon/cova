@@ -1,6 +1,10 @@
 export { InsightsHeader } from "./InsightsHeader";
 export { TabPills } from "./TabPills";
 export { WeekPickerOverlay } from "./WeekPickerOverlay";
+export {
+  WeekCalendarPanel,
+  type WeekCalendarPanelRef,
+} from "./WeekCalendarPanel";
 export { InsightsEmptyState } from "./InsightsEmptyState";
 export { StatStrip } from "./StatStrip";
 export { InsightsChart } from "./InsightsChart";

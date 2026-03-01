@@ -10,6 +10,15 @@ export const styles = StyleSheet.create({
   stickyHeader: {
     backgroundColor: Colors.cream,
   },
+  calendarOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "column",
+    zIndex: 10,
+    overflow: "hidden",
+  },
   stickyTabBar: {
     width: "100%",
     paddingHorizontal: 20,

@@ -91,9 +91,15 @@ export function InsightsHeader({
             <Pressable
               onPress={onDatePress}
               style={styles.datePill}
-              hitSlop={8}
+              hitSlop={12}
             >
               <Text style={styles.subtitle}>{weekRange}</Text>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={Colors.inkLight}
+                style={styles.chevronIcon}
+              />
             </Pressable>
             <Text style={styles.subtitleDot}>·</Text>
             <Pressable
@@ -110,11 +116,24 @@ export function InsightsHeader({
           </Animated.View>
           <Animated.View
             style={[styles.collapsedBar, collapsedOpacity]}
-            pointerEvents="none"
+            pointerEvents="box-none"
           >
-            <Text style={styles.collapsedText}>
-              {weekRange} · {babyName}
-            </Text>
+            <Pressable
+              onPress={onDatePress}
+              style={styles.collapsedDateTap}
+              hitSlop={8}
+            >
+              <Text style={styles.collapsedText}>
+                {weekRange}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={14}
+                color={Colors.inkLight}
+                style={styles.collapsedChevron}
+              />
+              <Text style={styles.collapsedText}> · {babyName}</Text>
+            </Pressable>
           </Animated.View>
         </View>
         {onShare && (
@@ -195,9 +214,17 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   datePill: {
+    flexDirection: "row",
+    alignItems: "center",
     minHeight: 44,
-    justifyContent: "center",
-    paddingVertical: 4,
+    minWidth: 44,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(0,0,0,0.04)",
+    borderRadius: 8,
+  },
+  chevronIcon: {
+    marginLeft: 4,
   },
   childPill: {
     minHeight: 44,
@@ -224,11 +251,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  collapsedDateTap: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 44,
   },
   collapsedText: {
     fontFamily: "DM-Sans",
     fontSize: 13,
     color: Colors.inkLight,
+  },
+  collapsedChevron: {
+    marginLeft: 2,
+    marginRight: 2,
   },
   shareBtn: {
     width: 44,
