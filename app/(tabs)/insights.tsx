@@ -17,14 +17,10 @@ import { TABS } from "../../lib/insights";
 import {
   InsightsHeader,
   TabPills,
-  StatStrip,
-  InsightsChart,
-  InsightCard,
-  ChartLegend,
   ExportButton,
-  WeeklyProgressRibbon,
   FeedsTabContent,
   SleepTabContent,
+  DiapersTabContent,
 } from "../../components/insights";
 import { styles } from "./insights.styles";
 
@@ -42,7 +38,6 @@ export default function InsightsScreen() {
     insights,
     chartData,
     maxVal,
-    statItems,
     weekRange,
     activeTab,
     setActiveTab,
@@ -59,8 +54,6 @@ export default function InsightsScreen() {
     await refetch();
     setRefreshing(false);
   };
-
-  const activeConfig = TABS.find((t) => t.id === activeTab)!;
 
   if (!activeBaby) {
     return (
@@ -142,57 +135,19 @@ export default function InsightsScreen() {
             scrollY={scrollY}
           />
         ) : (
-          <>
-            <View style={styles.chartCard}>
-              <StatStrip items={statItems} accentColor={activeConfig.color} />
-
-              <InsightsChart
-                activeTab={activeTab}
-                chartData={chartData}
-                maxVal={maxVal}
-                stats={stats}
-                accentColor={activeConfig.color}
-              />
-
-              <ChartLegend
-                activeTab={activeTab}
-                totalFeeds={stats.totalFeeds}
-                totalDiapers={stats.totalDiapers}
-                totalSleepHours={stats.totalSleepHours}
-              />
-
-              {activeTab === "diapers" &&
-                stats.totalDiapers > 0 &&
-                stats.diaperInsights.wetVsDirtyShift != null &&
-                stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
-                  <Text style={styles.wetDirtyShiftNote}>
-                    {stats.diaperInsights.wetVsDirtyShift === "more_wet"
-                      ? "Wet/dirty ratio shifted toward more wet this week"
-                      : "Wet/dirty ratio shifted toward more dirty this week"}
-                  </Text>
-                )}
-            </View>
-
-            <Text style={styles.sectionLabel}>Patterns</Text>
-            <WeeklyProgressRibbon
-              text={ribbonText}
-              emoji={ribbonEmoji}
-              activeTab={activeTab}
-            />
-            {insights[activeTab].map((item) => (
-              <InsightCard key={item.title} item={item} />
-            ))}
-
-            <ExportButton
-              accentColor={activeConfig.color}
-              baby={activeBaby}
-              weekRange={weekRange}
-              stats={stats}
-              insights={insights}
-              currentWeekLogs={currentWeekLogs}
-              previousWeekLogs={previousWeekLogs}
-            />
-          </>
+          <DiapersTabContent
+            stats={stats}
+            chartData={chartData}
+            maxVal={maxVal}
+            insights={insights}
+            ribbonText={ribbonText}
+            ribbonEmoji={ribbonEmoji}
+            currentWeekLogs={currentWeekLogs}
+            previousWeekLogs={previousWeekLogs}
+            weekRange={weekRange}
+            baby={activeBaby}
+            scrollY={scrollY}
+          />
         )}
       </Animated.ScrollView>
     </View>

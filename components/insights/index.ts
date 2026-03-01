@@ -14,3 +14,7 @@ export { SleepStatsRow } from "./SleepStatsRow";
 export { SleepChart } from "./SleepChart";
 export { SleepPatternsSection } from "./SleepPatternsSection";
 export { SleepTabContent } from "./SleepTabContent";
+export { DiapersStatsRow } from "./DiapersStatsRow";
+export { DiapersChart } from "./DiapersChart";
+export { DiapersPatternsSection } from "./DiapersPatternsSection";
+export { DiapersTabContent } from "./DiapersTabContent";
