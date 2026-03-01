@@ -285,9 +285,8 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   elapsed: {
-    fontFamily: "DM-Mono",
+    fontFamily: "DM-Sans-Bold",
     fontSize: 28,
-    fontWeight: "500",
     color: Colors.ink,
     letterSpacing: 0.5,
   },
