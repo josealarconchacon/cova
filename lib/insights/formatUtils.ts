@@ -5,11 +5,11 @@ export function formatWeekRange(daysAgo: number): string {
   return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
 
-/** Week range for Sunday–Saturday (S M T W T F S). */
-export function formatWeekRangeSunSat(): string {
+/** Week range for Sunday–Saturday (S M T W T F S). offset 0 = this week, 1 = last week, etc. */
+export function formatWeekRangeSunSat(weekOffset = 0): string {
   const today = new Date();
   const start = new Date(today);
-  start.setDate(today.getDate() - today.getDay());
+  start.setDate(today.getDate() - today.getDay() - 7 * weekOffset);
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
   return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;

@@ -2,9 +2,27 @@ import { StyleSheet } from "react-native";
 import { Colors } from "../../constants/theme";
 
 export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.cream },
+  container: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: Colors.cream,
+  },
+  stickyHeader: {
+    backgroundColor: Colors.cream,
+  },
+  stickyTabBar: {
+    width: "100%",
+    paddingHorizontal: 20,
+    paddingBottom: 6,
+    backgroundColor: Colors.cream,
+  },
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 100 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 100,
+  },
+  contentEmpty: { flexGrow: 1 },
 
   headerRow: {
     flexDirection: "row",
@@ -27,21 +45,33 @@ export const styles = StyleSheet.create({
   },
 
   tabRow: {
+    flex: 1,
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 20,
-    backgroundColor: Colors.sand,
-    borderRadius: 18,
-    padding: 4,
+    alignSelf: "stretch",
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    backgroundColor: "#F0EBE3",
+    borderRadius: 50,
+    padding: 6,
   },
   tab: {
     flex: 1,
-    borderRadius: 14,
-    paddingVertical: 10,
+    flexBasis: 0,
+    flexGrow: 1,
+    minWidth: 0,
+    minHeight: 44,
     alignItems: "center",
-    flexDirection: "row",
     justifyContent: "center",
-    gap: 6,
+  },
+  tabPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 50,
   },
   tabText: {
     fontFamily: "DM-Sans",

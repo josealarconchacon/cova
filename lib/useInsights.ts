@@ -33,6 +33,7 @@ export interface UseInsightsResult {
   maxVal: number;
   statItems: StatItem[];
   weekRange: string;
+  weekOffset: number;
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
   ribbonText: string;
@@ -42,24 +43,24 @@ export interface UseInsightsResult {
   refetch: () => void;
 }
 
-export function useInsights(): UseInsightsResult {
+export function useInsights(weekOffset = 0): UseInsightsResult {
   const { profile, activeBaby } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>("feeds");
 
   const weekBounds = useMemo(() => {
     const today = new Date();
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    weekStart.setDate(today.getDate() - today.getDay() - 7 * weekOffset);
     weekStart.setHours(0, 0, 0, 0);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
     return { weekStart, weekEnd };
-  }, []);
+  }, [weekOffset]);
 
-  const fourteenDaysAgo = useMemo(() => {
+  const eightyFourDaysAgo = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 14);
+    d.setDate(d.getDate() - 84);
     return d;
   }, []);
 
@@ -78,7 +79,7 @@ export function useInsights(): UseInsightsResult {
         .from("logs")
         .select("*")
         .eq("baby_id", activeBaby!.id)
-        .gte("started_at", fourteenDaysAgo.toISOString())
+        .gte("started_at", eightyFourDaysAgo.toISOString())
         .order("started_at", { ascending: true });
       if (error) throw error;
       return data as Log[];
@@ -94,12 +95,27 @@ export function useInsights(): UseInsightsResult {
 
   const weekStartISO = weekBounds.weekStart.toISOString();
   const weekEndISO = weekBounds.weekEnd.toISOString();
+  const prevWeekStart = new Date(weekBounds.weekStart);
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+  prevWeekStart.setHours(0, 0, 0, 0);
+  const prevWeekEnd = new Date(prevWeekStart);
+  prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+  prevWeekEnd.setHours(23, 59, 59, 999);
+  const prevWeekStartISO = prevWeekStart.toISOString();
+  const prevWeekEndISO = prevWeekEnd.toISOString();
+
   const currentWeekLogs = allLogs.filter(
     (l) => l.started_at >= weekStartISO && l.started_at <= weekEndISO,
   );
-  const previousWeekLogs = allLogs.filter((l) => l.started_at < weekStartISO);
+  const previousWeekLogs = allLogs.filter(
+    (l) => l.started_at >= prevWeekStartISO && l.started_at <= prevWeekEndISO,
+  );
 
-  const stats = useWeeklyStats(currentWeekLogs, previousWeekLogs);
+  const stats = useWeeklyStats(
+    currentWeekLogs,
+    previousWeekLogs,
+    weekBounds.weekStart,
+  );
 
   const typeMap: Record<Tab, keyof (typeof stats.days)[0]> = {
     feeds: "feedCount",
@@ -123,7 +139,7 @@ export function useInsights(): UseInsightsResult {
     [stats, activeBaby, currentWeekLogs],
   );
 
-  const weekRange = formatWeekRangeSunSat();
+  const weekRange = formatWeekRangeSunSat(weekOffset);
 
   const wowChange =
     activeTab === "feeds"
@@ -210,6 +226,7 @@ export function useInsights(): UseInsightsResult {
     maxVal,
     statItems,
     weekRange,
+    weekOffset,
     activeTab,
     setActiveTab,
     ribbonText: ribbon.text,

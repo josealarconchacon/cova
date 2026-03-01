@@ -130,11 +130,16 @@ function computePeakHour(logs: Log[], type: string): number | null {
 export function useWeeklyStats(
   currentWeekLogs: Log[],
   previousWeekLogs: Log[] = [],
+  weekStartOverride?: Date,
 ): WeeklyStats {
   return useMemo(() => {
     const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    const weekStart = weekStartOverride
+      ? new Date(weekStartOverride)
+      : new Date(today);
+    if (!weekStartOverride) {
+      weekStart.setDate(today.getDate() - today.getDay());
+    }
     weekStart.setHours(0, 0, 0, 0);
     const days: DailyStats[] = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart);
@@ -594,5 +599,5 @@ export function useWeeklyStats(
         diapersPctChange: pctChange(totalDiapers, prevDiapers),
       },
     };
-  }, [currentWeekLogs, previousWeekLogs]);
+  }, [currentWeekLogs, previousWeekLogs, weekStartOverride]);
 }
