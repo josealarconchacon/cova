@@ -9,9 +9,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { supabase, withTimeout } from "../lib/supabase";
 import { useStore } from "../store/useStore";
+import { queryClient } from "../lib/queryClient";
 import type { Baby } from "../types";
-
-const queryClient = new QueryClient();
 
 type RouteTarget = "/(tabs)/" | "/onboarding" | "/(auth)/login" | null;
 
