@@ -1,5 +1,10 @@
-import React from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -18,6 +23,7 @@ import {
   ChartLegend,
   ExportButton,
   WeeklyProgressRibbon,
+  FeedsTabContent,
 } from "../../components/insights";
 import { styles } from "./insights.styles";
 
@@ -43,7 +49,15 @@ export default function InsightsScreen() {
     ribbonEmoji,
     currentWeekLogs,
     previousWeekLogs,
+    refetch,
   } = useInsights();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   const activeConfig = TABS.find((t) => t.id === activeTab)!;
 
@@ -84,6 +98,13 @@ export default function InsightsScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.teal}
+          />
+        }
       >
         <TabPills
           tabs={TABS}
@@ -91,55 +112,73 @@ export default function InsightsScreen() {
           onTabChange={setActiveTab}
         />
 
-        <View style={styles.chartCard}>
-          <StatStrip items={statItems} accentColor={activeConfig.color} />
-
-          <InsightsChart
-            activeTab={activeTab}
+        {activeTab === "feeds" ? (
+          <FeedsTabContent
+            stats={stats}
             chartData={chartData}
             maxVal={maxVal}
-            stats={stats}
-            accentColor={activeConfig.color}
+            insights={insights}
+            ribbonText={ribbonText}
+            ribbonEmoji={ribbonEmoji}
+            currentWeekLogs={currentWeekLogs}
+            previousWeekLogs={previousWeekLogs}
+            weekRange={weekRange}
+            baby={activeBaby}
+            scrollY={scrollY}
           />
+        ) : (
+          <>
+            <View style={styles.chartCard}>
+              <StatStrip items={statItems} accentColor={activeConfig.color} />
 
-          <ChartLegend
-            activeTab={activeTab}
-            totalFeeds={stats.totalFeeds}
-            totalDiapers={stats.totalDiapers}
-            totalSleepHours={stats.totalSleepHours}
-          />
+              <InsightsChart
+                activeTab={activeTab}
+                chartData={chartData}
+                maxVal={maxVal}
+                stats={stats}
+                accentColor={activeConfig.color}
+              />
 
-          {activeTab === "diapers" &&
-            stats.totalDiapers > 0 &&
-            stats.diaperInsights.wetVsDirtyShift != null &&
-            stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
-              <Text style={styles.wetDirtyShiftNote}>
-                {stats.diaperInsights.wetVsDirtyShift === "more_wet"
-                  ? "Wet/dirty ratio shifted toward more wet this week"
-                  : "Wet/dirty ratio shifted toward more dirty this week"}
-              </Text>
-            )}
-        </View>
+              <ChartLegend
+                activeTab={activeTab}
+                totalFeeds={stats.totalFeeds}
+                totalDiapers={stats.totalDiapers}
+                totalSleepHours={stats.totalSleepHours}
+              />
 
-        <Text style={styles.sectionLabel}>Patterns</Text>
-        <WeeklyProgressRibbon
-          text={ribbonText}
-          emoji={ribbonEmoji}
-          activeTab={activeTab}
-        />
-        {insights[activeTab].map((item) => (
-          <InsightCard key={item.title} item={item} />
-        ))}
+              {activeTab === "diapers" &&
+                stats.totalDiapers > 0 &&
+                stats.diaperInsights.wetVsDirtyShift != null &&
+                stats.diaperInsights.wetVsDirtyShift !== "balanced" && (
+                  <Text style={styles.wetDirtyShiftNote}>
+                    {stats.diaperInsights.wetVsDirtyShift === "more_wet"
+                      ? "Wet/dirty ratio shifted toward more wet this week"
+                      : "Wet/dirty ratio shifted toward more dirty this week"}
+                  </Text>
+                )}
+            </View>
 
-        <ExportButton
-          accentColor={activeConfig.color}
-          baby={activeBaby}
-          weekRange={weekRange}
-          stats={stats}
-          insights={insights}
-          currentWeekLogs={currentWeekLogs}
-          previousWeekLogs={previousWeekLogs}
-        />
+            <Text style={styles.sectionLabel}>Patterns</Text>
+            <WeeklyProgressRibbon
+              text={ribbonText}
+              emoji={ribbonEmoji}
+              activeTab={activeTab}
+            />
+            {insights[activeTab].map((item) => (
+              <InsightCard key={item.title} item={item} />
+            ))}
+
+            <ExportButton
+              accentColor={activeConfig.color}
+              baby={activeBaby}
+              weekRange={weekRange}
+              stats={stats}
+              insights={insights}
+              currentWeekLogs={currentWeekLogs}
+              previousWeekLogs={previousWeekLogs}
+            />
+          </>
+        )}
       </Animated.ScrollView>
     </View>
   );

@@ -6,3 +6,7 @@ export { InsightCard } from "./InsightCard";
 export { ChartLegend } from "./ChartLegend";
 export { ExportButton } from "./ExportButton";
 export { WeeklyProgressRibbon } from "./WeeklyProgressRibbon";
+export { FeedsStatsRow } from "./FeedsStatsRow";
+export { FeedsChart } from "./FeedsChart";
+export { FeedsPatternsSection } from "./FeedsPatternsSection";
+export { FeedsTabContent } from "./FeedsTabContent";

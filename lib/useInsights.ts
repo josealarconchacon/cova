@@ -39,6 +39,7 @@ export interface UseInsightsResult {
   ribbonEmoji: string;
   currentWeekLogs: Log[];
   previousWeekLogs: Log[];
+  refetch: () => void;
 }
 
 export function useInsights(): UseInsightsResult {
@@ -67,7 +68,7 @@ export function useInsights(): UseInsightsResult {
     [activeBaby?.id],
   );
 
-  const { data: allLogs = [] } = useQuery({
+  const { data: allLogs = [], refetch } = useQuery({
     queryKey: insightsQueryKey,
     enabled: !!activeBaby,
     refetchOnMount: "always",
@@ -215,5 +216,6 @@ export function useInsights(): UseInsightsResult {
     ribbonEmoji: ribbon.emoji,
     currentWeekLogs,
     previousWeekLogs,
+    refetch,
   };
 }
