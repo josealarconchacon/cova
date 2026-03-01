@@ -1,4 +1,5 @@
 import { View, ActivityIndicator } from "react-native";
+import { Colors } from "../constants/theme";
 
 // This is the app's true entry point. Expo-router renders this first
 // while _layout.tsx resolves fonts + auth state, then navigates away.
@@ -7,12 +8,12 @@ export default function IndexGate() {
     <View
       style={{
         flex: 1,
-        backgroundColor: "#FDFAF6",
+        backgroundColor: Colors.cream,
         justifyContent: "center",
         alignItems: "center",
       }}
     >
-      <ActivityIndicator size="large" color="#3D7A6E" />
+      <ActivityIndicator size="large" color={Colors.teal} />
     </View>
   );
 }
