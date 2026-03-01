@@ -192,7 +192,7 @@ export const styles = StyleSheet.create({
     marginBottom: 2,
   },
   milestoneDate: {
-    fontFamily: "DM-Mono",
+    fontFamily: "DM-Sans",
     fontSize: 11,
     color: Colors.inkLight,
   },
