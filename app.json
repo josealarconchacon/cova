@@ -19,11 +19,30 @@
           "origin": "https://cova.app"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cova uses your photo library so you can add photos to your baby's journal and milestones."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#3D7A6E",
+          "sounds": []
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.jose.cova"
+      "bundleIdentifier": "com.jose.cova",
+      "privacyPolicyUrl": "https://cova.app/privacy",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Cova uses your photo library so you can add photos to your baby's journal and milestones.",
+        "NSUserNotificationsUsageDescription": "Cova sends reminders for feeding times and updates from your co-parent."
+      }
     },
     "android": {
       "package": "com.jose.cova",
