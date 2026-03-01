@@ -20,6 +20,7 @@ export const Colors = {
   lavPale: "#F0EDF8",
   sky: "#5A8FC9",
   skyPale: "#EBF2FA",
+  error: "#C0392B",
 } as const;
 
 export const LogTypes = {
