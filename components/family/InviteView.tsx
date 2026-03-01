@@ -4,9 +4,12 @@ import {
   Text,
   TouchableOpacity,
   TextInput,
-  Alert,
 } from "react-native";
+import { supabase } from "../../lib/supabase";
+import { useStore } from "../../store/useStore";
 import { styles } from "../../app/(tabs)/family.styles";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const BENEFITS = [
   { icon: "⚡", text: "Under 1 second sync — no refreshing needed" },
@@ -17,25 +20,46 @@ const BENEFITS = [
 interface InviteViewProps {
   inviteCode: string;
   babyName: string;
+  inviterName?: string;
   onShare: () => void;
 }
 
-export function InviteView({ inviteCode, babyName, onShare }: InviteViewProps) {
+export function InviteView({
+  inviteCode,
+  babyName,
+  inviterName,
+  onShare,
+}: InviteViewProps) {
+  const profile = useStore((s) => s.profile);
   const [emailMode, setEmailMode] = useState(false);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [didSend, setDidSend] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sendEmail = async () => {
-    if (!email.includes("@")) {
-      Alert.alert("Invalid email", "Please enter a valid email address.");
+    const trimmed = email.trim();
+    if (!EMAIL_REGEX.test(trimmed)) {
+      setError("Please enter a valid email address.");
       return;
     }
+    setError(null);
     setSending(true);
-    // In production: call a Supabase Edge Function to send the email
-    // await supabase.functions.invoke('send-invite', { body: { email, inviteCode } })
-    await new Promise((r) => setTimeout(r, 1200)); // simulate
-    setSending(false);
-    Alert.alert("Invite sent! 🎉", `We sent an invite to ${email}`);
+    try {
+      const { error: fnError } = await supabase.functions.invoke("send-invite", {
+        body: {
+          email: trimmed,
+          inviteCode,
+          inviterName: inviterName ?? profile?.display_name ?? "Your co-parent",
+        },
+      });
+      if (fnError) throw fnError;
+      setDidSend(true);
+    } catch {
+      setError("Could not send invite. Please try sharing the link instead.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -63,7 +87,13 @@ export function InviteView({ inviteCode, babyName, onShare }: InviteViewProps) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setEmailMode((v) => !v)}
+        onPress={() => {
+          setEmailMode((v) => !v);
+          if (emailMode) {
+            setError(null);
+            setDidSend(false);
+          }
+        }}
         style={styles.secondaryBtn}
       >
         <Text style={styles.secondaryBtnText}>
@@ -75,23 +105,37 @@ export function InviteView({ inviteCode, babyName, onShare }: InviteViewProps) {
         <View style={styles.emailSection}>
           <Text style={styles.fieldLabel}>Their email address</Text>
           <TextInput
-            style={styles.emailInput}
+            style={[
+              styles.emailInput,
+              error && styles.emailInputError,
+            ]}
             placeholder="partner@email.com"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => {
+              setEmail(v);
+              setError(null);
+            }}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
+            editable={!sending && !didSend}
           />
-          <TouchableOpacity
-            style={[styles.primaryBtn, sending && { opacity: 0.6 }]}
-            onPress={sendEmail}
-            disabled={sending}
-          >
-            <Text style={styles.primaryBtnText}>
-              {sending ? "Sending…" : "Send invitation"}
-            </Text>
-          </TouchableOpacity>
+          {error && <Text style={styles.emailErrorText}>{error}</Text>}
+          {didSend ? (
+            <View style={styles.emailSuccessRow}>
+              <Text style={styles.emailSuccessText}>✓ Invite sent to {email}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.primaryBtn, sending && { opacity: 0.6 }]}
+              onPress={sendEmail}
+              disabled={sending}
+            >
+              <Text style={styles.primaryBtnText}>
+                {sending ? "Sending…" : "Send invitation"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
