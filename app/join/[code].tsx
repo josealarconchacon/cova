@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,29 +13,64 @@ import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
 import { setPendingInviteCode } from "../../lib/family/pendingInvite";
 
+type JoinState =
+  | "checking"
+  | "valid"
+  | "invalid"
+  | "expired"
+  | "already_member"
+  | "error";
+
 export default function JoinScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const { profile } = useStore();
   const [loading, setLoading] = useState(false);
-  const [verified, setVerified] = useState(false);
+  const [joinState, setJoinState] = useState<JoinState>("checking");
   const [familyName, setFamilyName] = useState("");
 
-  // ── Verify the code exists on mount ──────────────────────────
+  const validateInvite = useCallback(async () => {
+    if (!code || code.trim() === "") {
+      setJoinState("invalid");
+      return;
+    }
+
+    setJoinState("checking");
+
+    try {
+      const { data, error } = await supabase
+        .from("families")
+        .select("id, family_name, expires_at")
+        .eq("invite_code", code.toUpperCase())
+        .single();
+
+      if (error || !data) {
+        // PGRST116 = no rows returned (invalid code)
+        setJoinState(error?.code === "PGRST116" ? "invalid" : "error");
+        return;
+      }
+
+      const row = data as { id: string; family_name: string | null; expires_at?: string | null };
+      if (row.expires_at && new Date(row.expires_at) < new Date()) {
+        setJoinState("expired");
+        return;
+      }
+      if (profile?.family_id === row.id) {
+        setJoinState("already_member");
+        setFamilyName(row.family_name ?? "a family");
+        return;
+      }
+
+      setJoinState("valid");
+      setFamilyName(row.family_name ?? "a family");
+      await setPendingInviteCode(code);
+    } catch {
+      setJoinState("error");
+    }
+  }, [code, profile?.family_id]);
+
   useEffect(() => {
-    if (!code) return;
-    supabase
-      .from("families")
-      .select("id, family_name")
-      .eq("invite_code", code.toUpperCase())
-      .single()
-      .then(async ({ data, error }) => {
-        if (data && !error) {
-          setVerified(true);
-          setFamilyName(data.family_name ?? "a family");
-          await setPendingInviteCode(code);
-        }
-      });
-  }, [code]);
+    validateInvite();
+  }, [validateInvite]);
 
   const handleJoin = async () => {
     // Not logged in — go sign up first (invite code already stored in SecureStore)
@@ -53,7 +88,7 @@ export default function JoinScreen() {
     const { data: family, error: familyError } = await supabase
       .from("families")
       .select("id")
-      .eq("invite_code", code.toUpperCase())
+      .eq("invite_code", code!.toUpperCase())
       .single();
 
     if (familyError || !family) {
@@ -82,7 +117,16 @@ export default function JoinScreen() {
     router.replace("/(tabs)/");
   };
 
-  if (!verified) {
+  const goToApp = () => {
+    if (profile) {
+      router.replace("/(tabs)/");
+    } else {
+      router.replace("/(auth)/login");
+    }
+  };
+
+  // ── checking ──
+  if (joinState === "checking") {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={Colors.teal} />
@@ -91,6 +135,78 @@ export default function JoinScreen() {
     );
   }
 
+  // ── invalid ──
+  if (joinState === "invalid") {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={styles.stateIcon}>✕</Text>
+        <Text style={styles.title}>Invalid invite link</Text>
+        <Text style={styles.body}>
+          This invite link is not valid. Ask your co-parent to send a new one.
+        </Text>
+        <TouchableOpacity style={styles.btn} onPress={goToApp} activeOpacity={0.85}>
+          <Text style={styles.btnText}>Go to App</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── expired ──
+  if (joinState === "expired") {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={styles.stateIcon}>⏰</Text>
+        <Text style={styles.title}>Invite link expired</Text>
+        <Text style={styles.body}>
+          This link has expired. Invite links are valid for 7 days.
+        </Text>
+        <TouchableOpacity style={styles.btn} onPress={goToApp} activeOpacity={0.85}>
+          <Text style={styles.btnText}>Go to App</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── already_member ──
+  if (joinState === "already_member") {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={[styles.stateIcon, { color: Colors.moss }]}>✓</Text>
+        <Text style={styles.title}>You're already connected</Text>
+        <Text style={styles.body}>
+          You're already part of this family journal.
+        </Text>
+        <TouchableOpacity style={styles.btn} onPress={goToApp} activeOpacity={0.85}>
+          <Text style={styles.btnText}>Open Journal</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── error (network, etc.) ──
+  if (joinState === "error") {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={[styles.stateIcon, { color: Colors.gold }]}>⚠</Text>
+        <Text style={styles.title}>Something went wrong</Text>
+        <Text style={styles.body}>
+          We couldn't verify this invite. Check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          style={styles.btn}
+          onPress={validateInvite}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.btnText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={goToApp} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>Go to App</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ── valid ──
   return (
     <View style={styles.container}>
       <Text style={{ fontSize: 56, textAlign: "center", marginBottom: 20 }}>
@@ -137,6 +253,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
+  stateContainer: {
+    flex: 1,
+    backgroundColor: Colors.cream,
+    padding: 28,
+    paddingTop: 100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stateIcon: {
+    fontSize: 64,
+    color: Colors.error,
+    marginBottom: 24,
+  },
   verifyText: {
     fontFamily: "DM-Sans",
     fontSize: 14,
@@ -181,7 +310,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   codeValue: {
-    fontFamily: "DM-Mono",
+    fontFamily: "DM-Sans",
     fontSize: 30,
     color: Colors.teal,
     letterSpacing: 4,
