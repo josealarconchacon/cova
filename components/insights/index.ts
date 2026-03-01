@@ -10,3 +10,7 @@ export { FeedsStatsRow } from "./FeedsStatsRow";
 export { FeedsChart } from "./FeedsChart";
 export { FeedsPatternsSection } from "./FeedsPatternsSection";
 export { FeedsTabContent } from "./FeedsTabContent";
+export { SleepStatsRow } from "./SleepStatsRow";
+export { SleepChart } from "./SleepChart";
+export { SleepPatternsSection } from "./SleepPatternsSection";
+export { SleepTabContent } from "./SleepTabContent";

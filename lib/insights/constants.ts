@@ -41,7 +41,12 @@ export type Tab = "feeds" | "sleep" | "diapers";
 
 export const TABS = [
   { id: "feeds" as Tab, Icon: FeedIcon, label: "Feeds", color: Colors.dusk },
-  { id: "sleep" as Tab, Icon: SleepIcon, label: "Sleep", color: Colors.sky },
+  {
+    id: "sleep" as Tab,
+    Icon: SleepIcon,
+    label: "Sleep",
+    color: "#2C3E6B",
+  },
   {
     id: "diapers" as Tab,
     Icon: DiaperIcon,

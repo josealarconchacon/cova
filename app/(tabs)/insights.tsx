@@ -24,6 +24,7 @@ import {
   ExportButton,
   WeeklyProgressRibbon,
   FeedsTabContent,
+  SleepTabContent,
 } from "../../components/insights";
 import { styles } from "./insights.styles";
 
@@ -114,6 +115,20 @@ export default function InsightsScreen() {
 
         {activeTab === "feeds" ? (
           <FeedsTabContent
+            stats={stats}
+            chartData={chartData}
+            maxVal={maxVal}
+            insights={insights}
+            ribbonText={ribbonText}
+            ribbonEmoji={ribbonEmoji}
+            currentWeekLogs={currentWeekLogs}
+            previousWeekLogs={previousWeekLogs}
+            weekRange={weekRange}
+            baby={activeBaby}
+            scrollY={scrollY}
+          />
+        ) : activeTab === "sleep" ? (
+          <SleepTabContent
             stats={stats}
             chartData={chartData}
             maxVal={maxVal}
