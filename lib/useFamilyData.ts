@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "./supabase";
 import type { Profile } from "../types";
 
 export function useFamilyData(familyId: string | undefined) {
-  const { data: members = [] } = useQuery({
+  const membersQuery = useQuery({
     queryKey: ["family-members", familyId],
     enabled: !!familyId,
     queryFn: async () => {
@@ -17,19 +16,30 @@ export function useFamilyData(familyId: string | undefined) {
     },
   });
 
-  const [inviteCode, setInviteCode] = useState("");
+  const inviteQuery = useQuery({
+    queryKey: ["family-invite", familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("families")
+        .select("invite_code")
+        .eq("id", familyId!)
+        .single();
+      if (error) throw error;
+      return data?.invite_code ?? "";
+    },
+  });
 
-  useEffect(() => {
-    if (!familyId) return;
-    supabase
-      .from("families")
-      .select("invite_code")
-      .eq("id", familyId)
-      .single()
-      .then(({ data }) => {
-        if (data) setInviteCode(data.invite_code);
-      });
-  }, [familyId]);
+  const members = membersQuery.data ?? [];
+  const inviteCode = inviteQuery.data ?? "";
+  const isLoading =
+    !!familyId &&
+    (membersQuery.isLoading || membersQuery.isFetching || inviteQuery.isLoading || inviteQuery.isFetching);
+  const isError = membersQuery.isError || inviteQuery.isError;
+  const refetch = () => {
+    membersQuery.refetch();
+    inviteQuery.refetch();
+  };
 
-  return { members, inviteCode };
+  return { members, inviteCode, isLoading, isError, refetch };
 }
