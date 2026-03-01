@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, Share } from "react-native";
+import {
+  View,
+  Text,
+  Share,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import Constants from "expo-constants";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -8,8 +16,10 @@ import Animated, {
   Extrapolation,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { useStore } from "../../store/useStore";
 import { useFamilyData } from "../../lib/useFamilyData";
+import { signOut } from "../../lib/auth/signOut";
 import { ConnectedView, InviteView } from "../../components/family";
 import { Colors } from "../../constants/theme";
 import { styles } from "./family.styles";
@@ -25,7 +35,13 @@ export default function FamilyScreen() {
     },
   });
   const { profile, activeBaby } = useStore();
-  const { members, inviteCode } = useFamilyData(profile?.family_id);
+  const {
+    members,
+    inviteCode,
+    isLoading,
+    isError,
+    refetch,
+  } = useFamilyData(profile?.family_id);
 
   const hasCoParent = members.length > 1;
 
@@ -72,6 +88,17 @@ export default function FamilyScreen() {
     return { transform: [{ scale }] };
   });
 
+  const handleSignOut = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign Out", style: "destructive", onPress: signOut },
+      ]
+    );
+  };
+
   const shareInvite = async () => {
     const link = `https://cova.app/join/${inviteCode}`;
     await Share.share({
@@ -79,6 +106,30 @@ export default function FamilyScreen() {
       url: link,
     });
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingCenter]}>
+        <ActivityIndicator size="large" color={Colors.teal} />
+        <Text style={styles.loadingText}>Loading family…</Text>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={[styles.container, styles.loadingCenter]}>
+        <Text style={styles.errorTitle}>Could not load family data</Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => refetch()}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -114,9 +165,31 @@ export default function FamilyScreen() {
           <InviteView
             inviteCode={inviteCode}
             babyName={activeBaby?.name ?? "your baby"}
+            inviterName={profile?.display_name}
             onShare={shareInvite}
           />
         )}
+
+        <TouchableOpacity
+          onPress={() => router.push("/(settings)/privacy-policy")}
+          style={styles.privacyRow}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.privacyText}>Privacy Policy</Text>
+          <Text style={styles.privacyChevron}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleSignOut}
+          style={styles.signOutRow}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.versionText}>
+          Cova v{Constants.expoConfig?.version ?? "1.0.0"}
+        </Text>
       </Animated.ScrollView>
     </View>
   );
