@@ -166,6 +166,16 @@ export default function OnboardingScreen() {
             {loading ? "Creating journal…" : "Start our journal 🌿"}
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.legalRow}>
+          <Text style={styles.legalText}>By continuing you agree to our </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(settings)/privacy-policy")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -268,5 +278,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
     color: "white",
+  },
+  legalRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
+    paddingHorizontal: 14,
+  },
+  legalText: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    color: Colors.inkLight,
+  },
+  legalLink: {
+    fontFamily: "DM-Sans",
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.teal,
   },
 });
