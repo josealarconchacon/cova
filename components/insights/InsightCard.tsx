@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
+import { Colors } from "../../constants/theme";
 import { styles } from "../../app/(tabs)/insights.styles";
 import type { InsightCard as InsightCardType } from "../../lib/insights";
 
@@ -25,10 +26,50 @@ export function InsightCard({ item }: InsightCardProps) {
             <Text style={{ fontSize: 16 }}>{item.icon}</Text>
           )}
         </View>
-        <Text style={styles.insightTitle}>{item.title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.insightTitle}>{item.title}</Text>
+          {item.scoreBar != null && (
+            <Text
+              style={[
+                styles.insightTitle,
+                {
+                  fontSize: 28,
+                  marginTop: 4,
+                  color: item.color,
+                },
+              ]}
+            >
+              {item.scoreBar.score}
+            </Text>
+          )}
+        </View>
       </View>
       <Text style={styles.insightText}>{item.text}</Text>
-      {item.balanceBar && (
+      {item.scoreBar != null && (
+        <View style={styles.balanceBarTrack}>
+          <View
+            style={[
+              styles.balanceBarLeft,
+              {
+                flex: item.scoreBar.score / item.scoreBar.maxScore,
+                backgroundColor: item.color + "60",
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.balanceBarRight,
+              {
+                flex:
+                  (item.scoreBar.maxScore - item.scoreBar.score) /
+                  item.scoreBar.maxScore,
+                backgroundColor: Colors.sandDark + "40",
+              },
+            ]}
+          />
+        </View>
+      )}
+      {item.balanceBar != null && item.scoreBar == null && (
         <View style={styles.balanceBarTrack}>
           <View
             style={[

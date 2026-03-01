@@ -5,3 +5,4 @@ export { InsightsChart } from "./InsightsChart";
 export { InsightCard } from "./InsightCard";
 export { ChartLegend } from "./ChartLegend";
 export { ExportButton } from "./ExportButton";
+export { WeeklyProgressRibbon } from "./WeeklyProgressRibbon";

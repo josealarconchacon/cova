@@ -2,11 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Colors } from "../../constants/theme";
 import { styles } from "../../app/(tabs)/insights.styles";
-import {
-  DIAPER_COLORS,
-  SLEEP_COLORS,
-  formatDayName,
-} from "../../lib/insights";
+import { DIAPER_COLORS, SLEEP_COLORS, formatDayName } from "../../lib/insights";
 import { getDayLetter } from "../../lib/insights/formatUtils";
 import { toLocalDateKey } from "../../lib/home/dateUtils";
 import type { Tab } from "../../lib/insights";
@@ -54,7 +50,11 @@ function FeedBar({
   if (isZeroDay) {
     return (
       <Pressable
-        style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+        style={[
+          styles.barWrap,
+          isSelected && styles.barWrapSelected,
+          { opacity },
+        ]}
         onPress={onPress}
       >
         <View style={styles.barTrack}>
@@ -77,7 +77,11 @@ function FeedBar({
 
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+      style={[
+        styles.barWrap,
+        isSelected && styles.barWrapSelected,
+        { opacity },
+      ]}
       onPress={onPress}
     >
       {isPeakDay && (
@@ -172,7 +176,11 @@ function DiaperBar({
   if (isZeroDay) {
     return (
       <Pressable
-        style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+        style={[
+          styles.barWrap,
+          isSelected && styles.barWrapSelected,
+          { opacity },
+        ]}
         onPress={onPress}
       >
         <View style={styles.barTrack}>
@@ -195,7 +203,11 @@ function DiaperBar({
 
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+      style={[
+        styles.barWrap,
+        isSelected && styles.barWrapSelected,
+        { opacity },
+      ]}
       onPress={onPress}
     >
       {isPeakDay && (
@@ -298,7 +310,11 @@ function SleepBar({
 
   return (
     <Pressable
-      style={[styles.barWrap, isSelected && styles.barWrapSelected, { opacity }]}
+      style={[
+        styles.barWrap,
+        isSelected && styles.barWrapSelected,
+        { opacity },
+      ]}
       onPress={onPress}
     >
       <View style={styles.barTrack}>
@@ -406,7 +422,10 @@ function BarDetailView({
         </Text>
         {isPeakDay && (
           <Text
-            style={[styles.barDetailSub, { color: Colors.teal, fontWeight: "600" }]}
+            style={[
+              styles.barDetailSub,
+              { color: Colors.teal, fontWeight: "600" },
+            ]}
           >
             Most active day this week
           </Text>
@@ -442,7 +461,10 @@ function BarDetailView({
         </Text>
         {flags.length > 0 && (
           <Text
-            style={[styles.barDetailSub, { color: Colors.teal, fontWeight: "600" }]}
+            style={[
+              styles.barDetailSub,
+              { color: Colors.teal, fontWeight: "600" },
+            ]}
           >
             {flags.join(" · ")}
           </Text>
@@ -455,7 +477,9 @@ function BarDetailView({
   const nightStr = day.nightHours > 0 ? `${day.nightHours}h night` : "";
   const parts = [napStr, nightStr].filter(Boolean);
   const detail =
-    parts.length > 0 ? parts.join(" · ") + ` — ${day.sleepHours}h total` : "No sleep";
+    parts.length > 0
+      ? parts.join(" · ") + ` — ${day.sleepHours}h total`
+      : "No sleep";
   const meetsTarget = day.sleepHours > 0 && day.sleepHours >= recommendedMin;
   const vsTarget =
     day.sleepHours > 0
@@ -537,12 +561,11 @@ export function InsightsChart({
         ? Math.min(95, Math.max(5, (avgDiapers / maxVal) * 100))
         : null;
   const avgLineLabel = isFeeds ? avgFeeds.toFixed(1) : avgDiapers.toFixed(1);
-  const peakDayIndex =
-    isFeeds
-      ? stats.feedInsights.peakDayIndex
-      : isDiapers
-        ? stats.diaperInsights.peakDayIndex
-        : null;
+  const peakDayIndex = isFeeds
+    ? stats.feedInsights.peakDayIndex
+    : isDiapers
+      ? stats.diaperInsights.peakDayIndex
+      : null;
   const wowForTab = isFeeds ? feedWow : isDiapers ? diaperWow : null;
   const todayStr = toLocalDateKey(new Date());
 
@@ -567,7 +590,12 @@ export function InsightsChart({
             {wowForTab > 0 ? "+" : ""}
             {wowForTab}%
           </Text>
-          <Text style={[styles.trendArrowText, { color: Colors.inkLight, fontWeight: "500", fontSize: 10 }]}>
+          <Text
+            style={[
+              styles.trendArrowText,
+              { color: Colors.inkLight, fontWeight: "500", fontSize: 10 },
+            ]}
+          >
             vs last week
           </Text>
         </View>
@@ -591,73 +619,70 @@ export function InsightsChart({
         )}
         {avgLinePct != null && (
           <View style={[styles.referenceLine, { bottom: `${avgLinePct}%` }]}>
-            <Text style={styles.avgLineLabel}>
-              Avg {avgLineLabel}
-            </Text>
+            <Text style={styles.avgLineLabel}>Avg {avgLineLabel}</Text>
             <View style={styles.avgLine} />
           </View>
         )}
         <View style={styles.barsRow}>
-        {chartData.map((val: number, i: number) => {
-          const day = stats.days[i];
-          const isToday = day.date === todayStr;
-          const isDimmed =
-            selectedDayIndex != null && selectedDayIndex !== i;
+          {chartData.map((val: number, i: number) => {
+            const day = stats.days[i];
+            const isToday = day.date === todayStr;
+            const isDimmed = selectedDayIndex != null && selectedDayIndex !== i;
 
-          if (activeTab === "feeds") {
+            if (activeTab === "feeds") {
+              return (
+                <FeedBar
+                  key={i}
+                  day={day}
+                  val={val}
+                  maxVal={maxVal}
+                  isToday={isToday}
+                  accentColor={accentColor}
+                  dayIndex={i}
+                  onPress={() => handleBarPress(i)}
+                  isSelected={selectedDayIndex === i}
+                  isPeakDay={peakDayIndex === i}
+                  isDimmed={isDimmed}
+                />
+              );
+            }
+
+            if (activeTab === "diapers") {
+              const diaperPeak = stats.diaperInsights.peakDayIndex;
+              const diaperLow = stats.diaperInsights.lowActivityDayIndices;
+              return (
+                <DiaperBar
+                  key={i}
+                  day={day}
+                  val={val}
+                  maxVal={maxVal}
+                  isToday={isToday}
+                  accentColor={accentColor}
+                  dayIndex={i}
+                  onPress={() => handleBarPress(i)}
+                  isSelected={selectedDayIndex === i}
+                  isDimmed={isDimmed}
+                  isPeakDay={diaperPeak === i}
+                  isLowActivity={diaperLow.includes(i)}
+                />
+              );
+            }
+
             return (
-              <FeedBar
+              <SleepBar
                 key={i}
                 day={day}
                 val={val}
-                maxVal={maxVal}
+                maxVal={effectiveMax}
                 isToday={isToday}
                 accentColor={accentColor}
                 dayIndex={i}
                 onPress={() => handleBarPress(i)}
                 isSelected={selectedDayIndex === i}
-                isPeakDay={peakDayIndex === i}
                 isDimmed={isDimmed}
               />
             );
-          }
-
-          if (activeTab === "diapers") {
-            const diaperPeak = stats.diaperInsights.peakDayIndex;
-            const diaperLow = stats.diaperInsights.lowActivityDayIndices;
-            return (
-              <DiaperBar
-                key={i}
-                day={day}
-                val={val}
-                maxVal={maxVal}
-                isToday={isToday}
-                accentColor={accentColor}
-                dayIndex={i}
-                onPress={() => handleBarPress(i)}
-                isSelected={selectedDayIndex === i}
-                isDimmed={isDimmed}
-                isPeakDay={diaperPeak === i}
-                isLowActivity={diaperLow.includes(i)}
-              />
-            );
-          }
-
-          return (
-            <SleepBar
-              key={i}
-              day={day}
-              val={val}
-              maxVal={effectiveMax}
-              isToday={isToday}
-              accentColor={accentColor}
-              dayIndex={i}
-              onPress={() => handleBarPress(i)}
-              isSelected={selectedDayIndex === i}
-              isDimmed={isDimmed}
-            />
-          );
-        })}
+          })}
         </View>
       </View>
       {selectedDayIndex != null ? (

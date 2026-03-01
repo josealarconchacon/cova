@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
+import { getPendingInviteCode, clearPendingInviteCode } from "../../lib/family/pendingInvite";
+import { joinFamily } from "../../lib/family/joinFamily";
 
 const ROLES = [
   { id: "mom", icon: "💛", label: "Mom" },
@@ -23,6 +25,7 @@ const ROLES = [
 ];
 
 export default function SignUpScreen() {
+  const { invite_code: inviteCodeParam } = useLocalSearchParams<{ invite_code?: string }>();
   const setProfile = useStore((s) => s.setProfile);
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
@@ -32,6 +35,21 @@ export default function SignUpScreen() {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  // Resolve invite code from params or SecureStore (params can be dropped on some navigation paths)
+  useEffect(() => {
+    const resolve = async () => {
+      const fromParam = inviteCodeParam?.trim();
+      if (fromParam) {
+        setInviteCode(fromParam.toUpperCase());
+        return;
+      }
+      const fromStore = await getPendingInviteCode();
+      if (fromStore) setInviteCode(fromStore);
+    };
+    resolve();
+  }, [inviteCodeParam]);
 
   // ── Step 1 validation ──
   const validateStep1 = () => {
@@ -89,24 +107,37 @@ export default function SignUpScreen() {
       return;
     }
 
-    // 2 + 3. Create family and profile atomically via a SECURITY DEFINER function.
-    // We pass the user ID explicitly because auth.uid() inside the function
-    // can return null if the session JWT isn't attached yet right after signUp().
-    const { data: familyId, error: setupError } = await supabase.rpc(
-      "create_family_and_profile",
-      {
-        p_user_id: data.user.id,
-        p_display_name: name.trim(),
-        p_role: role,
-      },
-    );
+    const resolvedInviteCode = inviteCode ?? (await getPendingInviteCode());
+
+    if (resolvedInviteCode) {
+      // Join existing family (invite flow)
+      try {
+        await joinFamily(resolvedInviteCode, data.user.id, name.trim(), role);
+        await clearPendingInviteCode();
+      } catch (err: unknown) {
+        setLoading(false);
+        Alert.alert("Couldn't join family", (err as Error).message);
+        return;
+      }
+    } else {
+      // Create new family and profile (default flow)
+      const { error: setupError } = await supabase.rpc(
+        "create_family_and_profile",
+        {
+          p_user_id: data.user.id,
+          p_display_name: name.trim(),
+          p_role: role,
+        },
+      );
+
+      if (setupError) {
+        setLoading(false);
+        Alert.alert("Setup failed", setupError.message);
+        return;
+      }
+    }
 
     setLoading(false);
-
-    if (setupError) {
-      Alert.alert("Setup failed", setupError.message);
-      return;
-    }
 
     // Fetch and cache the new profile so the store is populated before
     // we navigate — _layout.tsx won't re-route because we go there directly.
@@ -119,7 +150,9 @@ export default function SignUpScreen() {
 
     // Navigate immediately — don't wait for onAuthStateChange, which fires
     // before the profile exists and would otherwise route back to login.
-    router.replace("/onboarding");
+    // For invite flow: go to tabs (layout will redirect to onboarding if no baby).
+    // For new family: go to onboarding to create first baby.
+    router.replace(resolvedInviteCode ? "/(tabs)/" : "/onboarding");
   };
 
   const strength = passwordStrength();
@@ -317,7 +350,13 @@ export default function SignUpScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.btnText}>
-                {loading ? "Creating your Cova…" : "Create my Cova 🌿"}
+                {loading
+                  ? inviteCode
+                    ? "Joining family…"
+                    : "Creating your Cova…"
+                  : inviteCode
+                    ? "Join family 🌿"
+                    : "Create my Cova 🌿"}
               </Text>
             </TouchableOpacity>
 

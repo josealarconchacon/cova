@@ -10,6 +10,15 @@ import { formatDayName } from "./constants";
 import { hourRangeLabel } from "../useWeeklyStats";
 import type { WeeklyStats } from "../useWeeklyStats";
 import type { Baby } from "../../types";
+import type { Log } from "../../types";
+import { computeFeedingRhythmScore } from "./feedingRhythmScore";
+import { detectClusterFeeding } from "./clusterFeedDetector";
+import { computeSleepDebt } from "./sleepDebt";
+import { computeNapArchitecture } from "./napArchitecture";
+import {
+  computeHydrationSignal,
+  computeStoolPattern,
+} from "./diaperHealth";
 
 export interface InsightCard {
   icon: string;
@@ -19,11 +28,16 @@ export interface InsightCard {
   IconComponent?: React.ComponentType<{ size?: number; color?: string }>;
   /** Optional balance bar for Nursing Side Balance */
   balanceBar?: { leftPct: number; rightPct: number };
+  /** Optional score bar for Rhythm Score (0-100) */
+  scoreBar?: { score: number; maxScore: number };
 }
 
 const IRREGULAR_GAP_THRESHOLD_MIN = 300;
 
-export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
+export function buildFeedInsights(
+  stats: WeeklyStats,
+  currentWeekLogs: Log[] = [],
+): InsightCard[] {
   const cards: InsightCard[] = [];
   const { feedInsights } = stats;
 
@@ -39,6 +53,37 @@ export function buildFeedInsights(stats: WeeklyStats): InsightCard[] {
       color: Colors.inkLight,
     });
     return cards;
+  }
+
+  const feedLogs = currentWeekLogs.filter((l) => l.type === "feed");
+
+  // FEATURE 1: Feeding Rhythm Score — FIRST card
+  const rhythmResult = computeFeedingRhythmScore(feedLogs);
+  if (rhythmResult) {
+    cards.push({
+      icon: "🎵",
+      title: "Feeding Rhythm Score",
+      text: `${rhythmResult.label}. ${rhythmResult.explanation}`,
+      color: rhythmResult.color,
+      scoreBar: { score: rhythmResult.score, maxScore: 100 },
+    });
+  }
+
+  // FEATURE 2: Cluster Feed Detector
+  const clusters = detectClusterFeeding(feedLogs);
+  if (clusters.length > 0) {
+    const latest = clusters[clusters.length - 1];
+    const mainText = `${formatDayName(latest.date)}, ${latest.startTime}–${latest.endTime}: ${latest.feedCount} feeds in ${latest.windowHours}h`;
+    const subNote =
+      clusters.length > 1
+        ? `${clusters.length} cluster days this week`
+        : "Cluster feeding is normal and often signals a growth spurt or supply regulation";
+    cards.push({
+      icon: "📦",
+      title: "Cluster feeding detected",
+      text: `${mainText}. ${subNote}`,
+      color: Colors.dusk,
+    });
   }
 
   const parts: string[] = [];
@@ -254,22 +299,76 @@ function getWakeWindowLabel(avgMin: number, baby: Baby | null): string {
 export function buildSleepInsights(
   stats: WeeklyStats,
   baby: Baby | null,
+  currentWeekLogs: Log[] = [],
 ): InsightCard[] {
   const cards: InsightCard[] = [];
   const { sleepInsights } = stats;
   const recommended = getSleepRecommendation(baby);
   const avgPerDay = stats.totalSleepHours / 7;
 
-  cards.push({
-    icon: "📊",
-    title: "Sleep Debt Tracker",
-    text:
-      stats.totalSleepHours > 0
-        ? `Baby slept ${avgPerDay.toFixed(1)} hrs/day this week — recommended: ${recommended.min}–${recommended.max} hrs for ${baby?.date_of_birth ? "this age" : "newborns"}.`
-        : "Log sleep to compare against age-recommended totals (14–17 hrs for newborns).",
-    color: Colors.sky,
-    IconComponent: SleepIcon,
-  });
+  // FEATURE 3: Sleep Debt Indicator (replaces generic Sleep Debt Tracker)
+  const sleepDebtResult = computeSleepDebt(
+    stats.days,
+    stats.totalSleepHours,
+    baby,
+  );
+  const sleepLogs = currentWeekLogs.filter((l) => l.type === "sleep");
+  const napArch = computeNapArchitecture(sleepLogs, baby);
+
+  if (sleepDebtResult) {
+    cards.push({
+      icon: "📊",
+      title: "Sleep Debt Indicator",
+      text: sleepDebtResult.message,
+      color: sleepDebtResult.color,
+      IconComponent: SleepIcon,
+    });
+  } else if (stats.totalSleepHours === 0) {
+    cards.push({
+      icon: "📊",
+      title: "Sleep Debt Tracker",
+      text: "Log sleep to compare against age-recommended totals (14–17 hrs for newborns).",
+      color: Colors.sky,
+      IconComponent: SleepIcon,
+    });
+  }
+
+  // FEATURE 4: Nap Architecture Analyzer
+  if (napArch && (napArch.totalNapHours > 0 || napArch.totalNightHours > 0)) {
+    const formatMin = (m: number) => {
+      const h = Math.floor(m / 60);
+      const min = Math.round(m % 60);
+      return h > 0 ? `${h}h ${min}m` : `${min}m`;
+    };
+    const napCount = napArch.totalNaps;
+    const avgNap = napArch.avgNapDurationMin;
+    const longest = napArch.longestStretchMin;
+    const longestDay = napArch.longestStretchDay;
+    const lines: string[] = [];
+    if (napCount > 0) {
+      lines.push(
+        `${napCount} naps this week · avg ${formatMin(avgNap)} per nap`,
+      );
+    }
+    lines.push(
+      `Longest stretch: ${formatMin(longest)}${longestDay ? ` on ${longestDay}` : ""}`,
+    );
+    lines.push(
+      `Night sleep: ${napArch.totalNightHours}h total · Nap sleep: ${napArch.totalNapHours}h total`,
+    );
+    if (napArch.fewerNapsThanTypical) {
+      lines.push(
+        "Fewer naps than typical for this age — watch for overtiredness cues",
+      );
+    }
+    cards.push({
+      icon: "🛏️",
+      title: "Nap Architecture",
+      text: lines.join(". "),
+      color: Colors.sky,
+      IconComponent: SleepIcon,
+    });
+  }
 
   if (sleepInsights.avgWakeWindowMin != null) {
     const label = getWakeWindowLabel(sleepInsights.avgWakeWindowMin, baby);
@@ -365,6 +464,7 @@ function getDiaperMinPerDay(baby: Baby | null): number {
 export function buildDiaperInsights(
   stats: WeeklyStats,
   baby: Baby | null,
+  currentWeekLogs: Log[] = [],
 ): InsightCard[] {
   const cards: InsightCard[] = [];
   const { diaperInsights } = stats;
@@ -436,48 +536,40 @@ export function buildDiaperInsights(
     color: Colors.teal,
   });
 
-  // 3. Wet Diaper Hydration Indicator
-  const minWetPerDay = getDiaperMinWetPerDay(baby);
-  const lowWetDays = diaperInsights.lowWetDayIndices.length;
-  const hydrationText =
-    lowWetDays === 0
-      ? "Hydration looks good this week — wet diaper counts meet expected levels."
-      : `${lowWetDays} day${lowWetDays === 1 ? "" : "s"} this week had fewer wet diapers than expected (${minWetPerDay}+/day for age).`;
-  cards.push({
-    icon: "💧",
-    title: "Wet Diaper Hydration Indicator",
-    text: hydrationText,
-    color: lowWetDays === 0 ? Colors.teal : Colors.gold,
-  });
-
-  // 4. Stool Pattern Tracker — no consistency/color data exists, encourage logging
-  const dirtyDays = stats.days.filter((d) => d.dirtyCount > 0).length;
-  const consecutiveNoDirty = (() => {
-    let max = 0;
-    let curr = 0;
-    for (const d of stats.days) {
-      if (d.dirtyCount === 0) curr++;
-      else {
-        max = Math.max(max, curr);
-        curr = 0;
-      }
-    }
-    return Math.max(max, curr);
-  })();
-  let stoolText = "";
-  if (hasDirty) {
-    stoolText = `${diaperInsights.dirtyTotal} dirty diapers across ${dirtyDays} day${dirtyDays === 1 ? "" : "s"} this week.`;
-    if (consecutiveNoDirty >= 2) {
-      stoolText += ` Up to ${consecutiveNoDirty} consecutive days without a dirty diaper.`;
-    }
+  // FEATURE 5: Diaper Health — Card A: Hydration Signal
+  const hydrationResult = computeHydrationSignal(stats.days);
+  if (hydrationResult) {
+    cards.push({
+      icon: "💧",
+      title: "Hydration Signal",
+      text: hydrationResult.message,
+      color: hydrationResult.color,
+    });
   }
-  stoolText += " Log consistency and color when recording diapers for richer insights.";
-  cards.push({
-    icon: "💩",
-    title: "Stool Pattern Tracker",
-    text: stoolText,
-    color: Colors.dusk,
-  });
+
+  // FEATURE 5: Diaper Health — Card B: Stool Pattern
+  const diaperLogs = currentWeekLogs.filter((l) => l.type === "diaper");
+  const stoolResult = computeStoolPattern(
+    stats.days,
+    diaperLogs,
+    diaperInsights.prevDirtyTotal + diaperInsights.prevBothTotal,
+  );
+  if (stoolResult && stoolResult.messages.length > 0) {
+    cards.push({
+      icon: "💩",
+      title: "Stool Pattern",
+      text: stoolResult.messages.join(". "),
+      color: stoolResult.color,
+    });
+  } else if (stats.totalDiapers > 0 && hasDirty) {
+    const dirtyDays = stats.days.filter((d) => d.dirtyCount > 0).length;
+    cards.push({
+      icon: "💩",
+      title: "Stool Pattern",
+      text: `${diaperInsights.dirtyTotal} dirty diapers across ${dirtyDays} day${dirtyDays === 1 ? "" : "s"} this week. Log consistency and color when recording for richer insights.`,
+      color: Colors.dusk,
+    });
+  }
 
   // 5. Change Timing Pattern
   if (diaperInsights.peakHour != null) {

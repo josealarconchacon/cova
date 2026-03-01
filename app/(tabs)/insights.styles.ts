@@ -301,6 +301,18 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
     fontWeight: "600",
   },
+  progressRibbon: {
+    backgroundColor: Colors.sandDark + "30",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  progressRibbonText: {
+    fontFamily: "DM-Sans",
+    fontSize: 14,
+    color: Colors.ink,
+    lineHeight: 20,
+  },
   insightCard: {
     padding: 14,
     backgroundColor: Colors.cream,

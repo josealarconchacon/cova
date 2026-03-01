@@ -15,6 +15,7 @@ import {
   type InsightCard,
   type Tab,
 } from "./insights";
+import { computeWeeklyProgressRibbon } from "./insights/weeklyProgressRibbon";
 import { formatWeekRangeSunSat } from "./insights/formatUtils";
 import type { Log } from "../types";
 
@@ -34,6 +35,10 @@ export interface UseInsightsResult {
   weekRange: string;
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
+  ribbonText: string;
+  ribbonEmoji: string;
+  currentWeekLogs: Log[];
+  previousWeekLogs: Log[];
 }
 
 export function useInsights(): UseInsightsResult {
@@ -110,11 +115,11 @@ export function useInsights(): UseInsightsResult {
 
   const insights = useMemo(
     (): Record<Tab, InsightCard[]> => ({
-      feeds: buildFeedInsights(stats),
-      sleep: buildSleepInsights(stats, activeBaby ?? null),
-      diapers: buildDiaperInsights(stats, activeBaby ?? null),
+      feeds: buildFeedInsights(stats, currentWeekLogs),
+      sleep: buildSleepInsights(stats, activeBaby ?? null, currentWeekLogs),
+      diapers: buildDiaperInsights(stats, activeBaby ?? null, currentWeekLogs),
     }),
-    [stats, activeBaby],
+    [stats, activeBaby, currentWeekLogs],
   );
 
   const weekRange = formatWeekRangeSunSat();
@@ -190,6 +195,12 @@ export function useInsights(): UseInsightsResult {
     ];
   }, [activeTab, stats, wowLabel, wowChange, avg]);
 
+  const ribbon = computeWeeklyProgressRibbon(
+    activeTab,
+    stats,
+    activeBaby?.name ?? "Baby",
+  );
+
   return {
     allLogs,
     stats,
@@ -200,5 +211,9 @@ export function useInsights(): UseInsightsResult {
     weekRange,
     activeTab,
     setActiveTab,
+    ribbonText: ribbon.text,
+    ribbonEmoji: ribbon.emoji,
+    currentWeekLogs,
+    previousWeekLogs,
   };
 }

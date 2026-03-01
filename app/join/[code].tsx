@@ -11,6 +11,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
+import { setPendingInviteCode } from "../../lib/family/pendingInvite";
 
 export default function JoinScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -27,20 +28,21 @@ export default function JoinScreen() {
       .select("id, family_name")
       .eq("invite_code", code.toUpperCase())
       .single()
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (data && !error) {
           setVerified(true);
           setFamilyName(data.family_name ?? "a family");
+          await setPendingInviteCode(code);
         }
       });
   }, [code]);
 
   const handleJoin = async () => {
-    // Not logged in — go sign up first, then deep link back
+    // Not logged in — go sign up first (invite code already stored in SecureStore)
     if (!profile) {
       router.push({
         pathname: "/(auth)/signup",
-        params: { invite_code: code },
+        params: { invite_code: code ?? undefined },
       });
       return;
     }

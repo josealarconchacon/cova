@@ -17,6 +17,7 @@ import {
   InsightCard,
   ChartLegend,
   ExportButton,
+  WeeklyProgressRibbon,
 } from "../../components/insights";
 import { styles } from "./insights.styles";
 
@@ -38,6 +39,10 @@ export default function InsightsScreen() {
     weekRange,
     activeTab,
     setActiveTab,
+    ribbonText,
+    ribbonEmoji,
+    currentWeekLogs,
+    previousWeekLogs,
   } = useInsights();
 
   const activeConfig = TABS.find((t) => t.id === activeTab)!;
@@ -117,11 +122,24 @@ export default function InsightsScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>Patterns</Text>
+        <WeeklyProgressRibbon
+          text={ribbonText}
+          emoji={ribbonEmoji}
+          activeTab={activeTab}
+        />
         {insights[activeTab].map((item) => (
           <InsightCard key={item.title} item={item} />
         ))}
 
-        <ExportButton accentColor={activeConfig.color} />
+        <ExportButton
+          accentColor={activeConfig.color}
+          baby={activeBaby}
+          weekRange={weekRange}
+          stats={stats}
+          insights={insights}
+          currentWeekLogs={currentWeekLogs}
+          previousWeekLogs={previousWeekLogs}
+        />
       </Animated.ScrollView>
     </View>
   );
