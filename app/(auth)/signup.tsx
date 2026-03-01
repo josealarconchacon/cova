@@ -10,12 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { useStore } from "../../store/useStore";
 import { Colors } from "../../constants/theme";
-import { getPendingInviteCode, clearPendingInviteCode } from "../../lib/family/pendingInvite";
+import {
+  getPendingInviteCode,
+  clearPendingInviteCode,
+} from "../../lib/family/pendingInvite";
 import { joinFamily } from "../../lib/family/joinFamily";
+import { signInWithApple } from "../../lib/auth/appleAuth";
 
 const ROLES = [
   { id: "mom", icon: "💛", label: "Mom" },
@@ -25,8 +30,10 @@ const ROLES = [
 ];
 
 export default function SignUpScreen() {
-  const { invite_code: inviteCodeParam } = useLocalSearchParams<{ invite_code?: string }>();
-  const setProfile = useStore((s) => s.setProfile);
+  const { invite_code: inviteCodeParam } = useLocalSearchParams<{
+    invite_code?: string;
+  }>();
+  const { setProfile, setActiveBaby } = useStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +44,6 @@ export default function SignUpScreen() {
   const [showPass, setShowPass] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
-  // Resolve invite code from params or SecureStore (params can be dropped on some navigation paths)
   useEffect(() => {
     const resolve = async () => {
       const fromParam = inviteCodeParam?.trim();
@@ -74,7 +80,7 @@ export default function SignUpScreen() {
   const passwordStrength = () => {
     if (password.length === 0) return null;
     if (password.length < 8)
-      return { label: "Too short", color: "#C0392B", bars: 1 };
+      return { label: "Too short", color: Colors.error, bars: 1 };
     if (password.length < 12)
       return { label: "Good", color: Colors.teal, bars: 2 };
     if (password.length < 16)
@@ -156,6 +162,79 @@ export default function SignUpScreen() {
   };
 
   const strength = passwordStrength();
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { userId, fullName } = await signInWithApple();
+      const displayName = fullName?.trim() || "User";
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (profileError || !profile) {
+        const resolvedInviteCode = inviteCode ?? (await getPendingInviteCode());
+        if (resolvedInviteCode) {
+          await joinFamily(
+            resolvedInviteCode,
+            userId,
+            displayName,
+            "caregiver",
+          );
+          await clearPendingInviteCode();
+        } else {
+          const { error: setupError } = await supabase.rpc(
+            "create_family_and_profile",
+            {
+              p_user_id: userId,
+              p_display_name: displayName,
+              p_role: "caregiver",
+            },
+          );
+          if (setupError) throw setupError;
+        }
+
+        const { data: newProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        if (!newProfile) throw new Error("Profile not created");
+        setProfile(newProfile);
+
+        const { data: babies } = await supabase
+          .from("babies")
+          .select("*")
+          .eq("family_id", newProfile.family_id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        setActiveBaby(babies?.[0] ?? null);
+
+        router.replace(resolvedInviteCode ? "/(tabs)/" : "/onboarding");
+        return;
+      } else {
+        setProfile(profile);
+        const { data: babies } = await supabase
+          .from("babies")
+          .select("*")
+          .eq("family_id", profile.family_id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        const baby = babies?.[0] ?? null;
+        setActiveBaby(baby);
+        router.replace(baby ? "/(tabs)/" : "/onboarding");
+      }
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err?.code === "ERR_REQUEST_CANCELED") return;
+      Alert.alert("Sign up failed", (e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -260,7 +339,7 @@ export default function SignUpScreen() {
               style={[
                 styles.input,
                 confirm.length > 0 &&
-                  confirm !== password && { borderColor: "#C0392B" },
+                  confirm !== password && { borderColor: Colors.error },
               ]}
               placeholder="Repeat your password"
               placeholderTextColor={Colors.inkLight}
@@ -280,15 +359,27 @@ export default function SignUpScreen() {
               <Text style={styles.btnText}>Continue →</Text>
             </TouchableOpacity>
 
-            {/* Divider + Apple */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            <TouchableOpacity style={styles.appleBtn}>
-              <Text style={styles.appleBtnText}>🍎 Sign up with Apple</Text>
-            </TouchableOpacity>
+            {/* Divider + Apple (iOS only) */}
+            {Platform.OS === "ios" && (
+              <>
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={
+                    AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+                  }
+                  buttonStyle={
+                    AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                  }
+                  cornerRadius={12}
+                  style={styles.appleNativeBtn}
+                  onPress={handleAppleSignIn}
+                />
+              </>
+            )}
 
             <View style={styles.switchRow}>
               <Text style={styles.switchText}>Already have an account? </Text>
@@ -448,7 +539,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: "DM-Sans",
     fontSize: 12,
-    color: "#C0392B",
+    color: Colors.error,
     marginTop: -8,
     marginBottom: 12,
   },
@@ -479,8 +570,13 @@ const styles = StyleSheet.create({
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.sandDark },
   dividerText: { fontFamily: "DM-Sans", fontSize: 12, color: Colors.inkLight },
+  appleNativeBtn: {
+    width: "100%",
+    height: 48,
+    marginBottom: 4,
+  },
   appleBtn: {
-    backgroundColor: "#2A2018",
+    backgroundColor: Colors.ink,
     borderRadius: 18,
     padding: 17,
     alignItems: "center",
